@@ -36,8 +36,9 @@ DDD bounded contexts in `src/modules/<context>/{domain,application,ui}`:
 
 | Context | Owns |
 | --- | --- |
-| `identity` | login portals, RBAC (`domain/access-policy.ts`), profiles, password reset, invites, demo accounts |
-| `learning` | courses, live sessions, module/lesson curriculum, lesson progress, course player, certificates |
+| `identity` | login portals (+ KVKK notice), RBAC (`domain/access-policy.ts`), profiles, password reset, invites, demo accounts |
+| `learning` | courses/programmes, live trainings (`trainings.queries.ts`, `training-admin.actions.ts`), attendance, module/lesson curriculum, course player, certificates |
+| `people` | person cards + detail modal (`PersonCardGrid`), participant/instructor listings, teams (`Team`), team assignment, manual badge award |
 | `assessment` | quizzes (scoring in `domain/quiz.ts`), quiz runner/editor |
 | `assignments` | assignments, submissions, grading desk, feedback history, file policy |
 | `mentoring` | mentor slots, weekly availability template, appointments |
@@ -59,8 +60,13 @@ Feature briefs often use generic names. They map to existing pieces:
 | --- | --- |
 | `CourseEnrollment` | `Enrollment` (+ `status`, `completedAt`) |
 | `AssignmentSubmission` (PENDING/REVIEWED/REJECTED) | `Submission` (SUBMITTED/GRADED/RETURNED) + `AssignmentFeedback` history |
-| `MentorshipSession` | `Appointment` on a `MentorSlot` (auto-confirmed, no PENDING state) |
-| `MentorProfile` | `Profile` (`title`, `expertiseArea`, `meetingUrl`, `socialLinks`) + `MentorAvailability` |
+| `MentorshipSession` | `Appointment` on a `MentorSlot` (auto-confirmed, no PENDING state), booked by an admin for a team (`Appointment.teamId`) |
+| `MentorProfile` | `Profile` (`title`, `expertiseArea`, `socialLinks`) + `MentorAvailability` (meeting link is per appointment, not on the profile) |
+| `LiveTraining` / `Training` | `CourseSession` (+ `instructorId`, `topics` one per line, `badgeCode`) in a published course (programme) |
+| `TrainingAttendance` | `SessionAttendance` (PRESENT = training completed) |
+| `TrainingAssignment` | `Assignment` with `sessionId` (uploaded on `/trainings/[sessionId]`) |
+| `isSuspended` | `User.isActive = false` (blocks login; `sessionVersion` revokes sessions) |
+| `about` / `Hakkımda` | `Profile.bio`; `department` and `city` live on `Profile` |
 | `db push` | a migration file (`/db-sync`) |
 | `/student/courses/[slug]/player` | `/courses/[slug]?lesson=<id>` |
 | `/expert/grading` | `/instructor/assignments/[assignmentId]` (grading desk) |
@@ -69,10 +75,19 @@ Feature briefs often use generic names. They map to existing pieces:
 | `src/actions/...` | `src/modules/<context>/application/*.actions.ts` |
 | `updateLessonProgress` | `saveLessonProgressAction` / `markLessonCompleteAction` → `completeLesson()`; % via `lessonCompletion()` |
 
-Other areas: `/admin/users` (single create + CSV import), `/admin/audit`, `/admin` analytics, `/mentor/availability` (weekly planner), `/profile` (certificates), Cmd/Ctrl+K palette in every shell (`components/layout/command-palette.tsx`).
+Routes by role:
+
+- **Student**: `/dashboard` (training progress + badge showcase), `/trainings` (live-training calendar, Tamamlandı/Tamamlanmadı) and `/trainings/[sessionId]` (topics, link, assignment upload), `/assignments` (to-do list linking to the training), `/team` (Ekibim), `/mentors` (read-only availability + team sessions), `/profile` (attendance, 9 badges).
+- **Instructor**: `/instructor/students` is person cards; roll calls via `attendance-dialog.tsx`.
+- **Mentor**: appointment cards show the team brief; no join button, no booking.
+- **Admin**: `/admin` (training progress + weekly calendar), `/admin/users` (single create + CSV import, suspension), `/admin/participants` (cards, team select, badge toggles, team manager), `/admin/trainings` (training cards + Eğitmenler cards), `/admin/mentors` (session calendar, team booking via `slot-picker.tsx`), `/admin/courses` ("Programlar"), `/admin/reports` (demographics, attendance, mentoring, expertise, export; `/admin/exports` redirects here), `/admin/audit`.
+- Also: `/mentor/availability` (weekly planner), Cmd/Ctrl+K palette in every shell (`components/layout/command-palette.tsx`).
 
 ### Key flows
 
+- **Live-training programme**: the student experience is live trainings; progress = PRESENT attendances / trainings in enrolled, non-DRAFT courses (`trainingCompletion`). Every training query filters `course.status != DRAFT`; the self-paced Next.js demo course is seeded as DRAFT and hidden. Creating a training notifies enrolled students.
+- **Badges** (`engagement/domain/badges.ts`, 9 total): 6 training badges earned by attending the training with that `badgeCode`, 3 mentoring badges for the 1st/2nd/3rd completed team session, plus admin manual award/revoke (`setBadgeAction`). `awardBadgesSafely` runs after attendance and session completion (whole team).
+- **Teams**: `User.teamId`; admins manage teams and book mentor sessions for a team (`bookForTeamAction`; mentor + all members notified). Students may message only teammates (`contact-policy.ts`).
 - **Lesson completion** always goes through `completeLesson()`; it upserts `LessonProgress`, and when the last lesson is done it marks the enrollment `COMPLETED`, issues the `Certificate` and notifies. Videos complete at 90% watched, quizzes when passed, assignment lessons on submission (plus backfill when a lesson is linked to an already-submitted assignment), articles/live sessions/embedded videos via the manual button.
 - **Course page** `/courses/[slug]`: lesson-based courses render the player and redirect to a canonical `?lesson=<id>` (otherwise completing a lesson re-renders and jumps to the next one). Courses with no lessons fall back to the legacy session view.
 - **Certificates**: `/api/certificates/[code]` (PDF, public by code) and `/verify/[code]` (public, outside every RBAC area).
@@ -95,7 +110,7 @@ Other areas: `/admin/users` (single create + CSV import), `/admin/audit`, `/admi
 
 ## Seed
 
-`prisma/seed.ts` is idempotent (upserts by natural keys; quiz questions are only created when the quiz has none) and resets the four demo accounts' passwords to `SEED_PASSWORD` (default `HedeflerBir2026!`) on every run. It refuses `NODE_ENV=production` unless `SEED_ALLOW_PRODUCTION=true`. Demo accounts are defined once in `src/modules/identity/domain/demo-accounts.ts`; the login pages show "Demo ... Doldur" buttons only outside production (or with `DEMO_LOGIN_ENABLED=true`). The production `SEED_PASSWORD` lives in the git-ignored `.env.hostinger.local`; never copy it into tracked files. The seed table prints the password only when it is the default; a custom one shows as `SEED_PASSWORD`.
+`prisma/seed.ts` is idempotent (upserts by natural keys; quiz questions are only created when the quiz has none). `seedProgram` adds Takım Atlas/Nova, two passwordless demo teammates, the `hedeflerbir-2026` programme with 6 badge trainings, roll calls, a training assignment, a completed team mentoring session and earned badges. It also resets the four demo accounts' passwords to `SEED_PASSWORD` (default `HedeflerBir2026!`) on every run. It refuses `NODE_ENV=production` unless `SEED_ALLOW_PRODUCTION=true`. Demo accounts are defined once in `src/modules/identity/domain/demo-accounts.ts`; the login pages show "Demo ... Doldur" buttons only outside production (or with `DEMO_LOGIN_ENABLED=true`). The production `SEED_PASSWORD` lives in the git-ignored `.env.hostinger.local`; never copy it into tracked files. The seed table prints the password only when it is the default; a custom one shows as `SEED_PASSWORD`.
 
 ## Deployment (Hostinger Node.js app)
 
@@ -108,7 +123,9 @@ Other areas: `/admin/users` (single create + CSV import), `/admin/audit`, `/admi
 ## Conventions
 
 - Turkish UI copy; no em/en dashes in UI text; time ranges as `14:00 - 15:00`. Dates/times only via `src/lib/format.ts` (Europe/Istanbul, fixed UTC+3); `formatFullDate` when the year matters.
-- Design tokens only (`bg-surface-raised`, `text-subtle`, `border-border-strong`, `bg-brand/10`, ...), one indigo accent, light default + `.dark`. Focus ring: `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`. Icons: lucide-react.
+- Design tokens only (`bg-surface-raised`, `text-subtle`, `border-border-strong`, `bg-brand/10`, ...), light default + `.dark`. Brand palette in `globals.css`: primary `--brand` `#008374` (teal), accents `magenta` `#b41c83`, `cyan` `#01bbbe`, `amber` `#ffa200` (`bg-magenta`, `text-cyan`, ...) for badges, charts and status, not for primary actions. Emails/PDFs hardcode `#008374`.
+- People are shown as cards (`PersonCardGrid`: photo or initials avatar, modal with department, about, team, message form), not tables.
+- Server pages pass actions to client components as server-action references (`action.bind(null, id)`), never inline closures (Next.js throws "Functions cannot be passed directly to Client Components"). Focus ring: `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`. Icons: lucide-react.
 - Reuse `components/ui` primitives (Button, Card/`surfaceClass`, Dialog, FormField, Badge, EmptyState, ConfirmActionButton, SegmentedLinks, Markdown, AddToCalendar). Render user Markdown only through `components/ui/markdown.tsx` (no raw HTML).
 - Client components stay small leaves; pass Lucide icons to client components as elements, not component references.
 - Hydration: give `DndContext` a stable `id` (`useId`); header widgets that render Radix dialogs mount after hydration (see `command-palette.tsx`).
