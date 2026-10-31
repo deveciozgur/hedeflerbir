@@ -28,6 +28,10 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "radix-ui", "motion"],
     // Assignment uploads go through server actions (20 MB file limit + multipart overhead).
     serverActions: { bodySizeLimit: "21mb" },
+    // Shared hosting (Hostinger/CloudLinux) caps processes per account: the default one-worker-per-CPU
+    // static generation fails with "spawn EAGAIN". A single build worker stays under the limit.
+    cpus: Number(process.env.NEXT_BUILD_CPUS) || 1,
+    webpackBuildWorker: false,
   },
   images: {
     remotePatterns: [{ protocol: "https", hostname: "**.r2.cloudflarestorage.com" }],
