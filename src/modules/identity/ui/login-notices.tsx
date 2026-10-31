@@ -16,7 +16,7 @@ export function ForgotPasswordLink() {
   return (
     <Link
       href="/forgot-password"
-      className="w-fit rounded-md text-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      className="w-fit rounded-md text-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       Şifremi unuttum
     </Link>

@@ -10,8 +10,8 @@ import { MentorAppointmentCard } from "@/modules/mentoring/ui/mentor-appointment
 export const metadata: Metadata = { title: "Randevular" };
 
 const PHASES = [
-  { value: "upcoming", label: "Yaklaşan", href: "/mentor/appointments", icon: CalendarClock },
-  { value: "past", label: "Geçmiş", href: "/mentor/appointments?phase=past", icon: History },
+  { value: "upcoming", label: "Yaklaşan", href: "/mentor/appointments", icon: <CalendarClock /> },
+  { value: "past", label: "Geçmiş", href: "/mentor/appointments?phase=past", icon: <History /> },
 ] as const;
 
 export default async function MentorAppointmentsPage({ searchParams }: { searchParams: Promise<{ phase?: string }> }) {

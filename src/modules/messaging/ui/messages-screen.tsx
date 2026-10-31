@@ -48,8 +48,8 @@ export async function MessagesScreen({ viewer, threadId, scope = "mine" }: Messa
               label="Kapsam"
               value={oversight ? "all" : "mine"}
               options={[
-                { value: "mine", label: "Gelen kutum", href: basePath, icon: Inbox },
-                { value: "all", label: "Tüm platform", href: `${basePath}?scope=all`, icon: Eye },
+                { value: "mine", label: "Gelen kutum", href: basePath, icon: <Inbox /> },
+                { value: "all", label: "Tüm platform", href: `${basePath}?scope=all`, icon: <Eye /> },
               ]}
             />
           ) : null}
@@ -71,7 +71,7 @@ export async function MessagesScreen({ viewer, threadId, scope = "mine" }: Messa
               <header className="flex items-center gap-3 border-b px-4 py-3 sm:px-6">
                 <Link
                   href={`${basePath}${query}`}
-                  className="-ml-1 rounded-md p-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 lg:hidden"
+                  className="-ml-1 rounded-md p-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:hidden"
                   aria-label="Konuşma listesine dön"
                 >
                   <ArrowLeft className="size-5" />

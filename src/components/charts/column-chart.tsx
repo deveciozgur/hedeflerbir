@@ -54,7 +54,7 @@ export function ColumnChart({ data, title, unit, height = 176 }: ColumnChartProp
               aria-pressed={view === mode}
               onClick={() => setView(mode)}
               className={cn(
-                "inline-flex h-6 items-center gap-1 rounded px-2 text-[11px] font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                "inline-flex h-6 items-center gap-1 rounded px-2 text-[11px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                 view === mode ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -136,7 +136,7 @@ export function ColumnChart({ data, title, unit, height = 176 }: ColumnChartProp
                       <span
                         aria-hidden
                         className={cn(
-                          "w-full max-w-6 rounded-t-[4px] bg-brand transition-[filter] group-focus-visible:ring-[3px] group-focus-visible:ring-ring/50",
+                          "w-full max-w-6 rounded-t-[4px] bg-brand transition-[filter] group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background",
                           isActive && "brightness-110",
                         )}
                         style={{ height: `${pct}%`, minHeight: d.value > 0 ? 2 : 0 }}

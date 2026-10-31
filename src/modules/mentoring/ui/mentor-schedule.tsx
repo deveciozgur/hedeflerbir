@@ -57,7 +57,7 @@ export function MentorSchedule({ slots }: { slots: MentorSlotRow[] }) {
                   {day.items.map((slot) => (
                     <li key={slot.id} className="flex items-center gap-3 px-3 py-2">
                       <span className="w-28 shrink-0 text-sm tabular-nums">
-                        {formatTime(slot.startTime)} – {formatTime(slot.endTime)}
+                        {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
                       </span>
                       <span className="min-w-0 flex-1 truncate">
                         <SlotState slot={slot} />

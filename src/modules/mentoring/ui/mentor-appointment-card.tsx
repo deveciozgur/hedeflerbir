@@ -31,7 +31,7 @@ export function MentorAppointmentCard({ appointment: a }: { appointment: MentorA
             <p className="truncate text-sm font-semibold">{fullName(student)}</p>
             <p className="text-xs tabular-nums text-muted-foreground">
               <time dateTime={a.startTime.toISOString()}>
-                {formatDateTime(a.startTime)} – {formatTime(a.endTime)}
+                {formatDateTime(a.startTime)} - {formatTime(a.endTime)}
               </time>
               {a.status === "CONFIRMED" ? ` · ${formatRelative(a.startTime)}` : null}
             </p>

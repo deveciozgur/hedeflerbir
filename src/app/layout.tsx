@@ -8,15 +8,13 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: appBaseUrl(),
   title: { default: "HedeflerBir", template: "%s · HedeflerBir" },
-  description: "HedeflerBir öğrenme platformu — eğitimler, ödevler ve mentorluk tek yerde.",
+  description: "HedeflerBir öğrenme platformu: eğitimler, ödevler ve mentorluk tek yerde.",
   robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
-  ],
+  themeColor: "#09090b",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

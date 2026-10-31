@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, ExternalLink, Layers, Mail } from "lucide-react";
+import { ArrowLeft, BookOpen, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { UserAvatar } from "@/components/ui/user-avatar";
-import { fullName } from "@/lib/utils";
+import { PersonHeader } from "@/components/ui/person-header";
 import { getViewer } from "@/modules/identity/application/viewer.queries";
 import { getInstructorForStudent } from "@/modules/learning/application/instructor-directory.queries";
 
@@ -20,38 +19,14 @@ export default async function InstructorDetailPage({ params }: { params: Promise
     <div className="flex flex-col gap-8">
       <Link
         href="/instructors"
-        className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         <ArrowLeft className="size-4" aria-hidden /> Eğitmenler
       </Link>
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-2 lg:self-start">
-          <CardContent className="flex flex-col gap-5">
-            <div className="flex items-center gap-4">
-              <UserAvatar user={instructor} className="size-16" />
-              <div className="min-w-0">
-                <h1 className="text-lg font-semibold tracking-tight">{fullName(instructor)}</h1>
-                {instructor.title ? <p className="text-sm text-muted-foreground">{instructor.title}</p> : null}
-              </div>
-            </div>
-            {instructor.expertiseArea ? <Badge variant="brand">{instructor.expertiseArea}</Badge> : null}
-            {instructor.bio ? <p className="text-sm leading-relaxed whitespace-pre-wrap text-pretty">{instructor.bio}</p> : null}
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline" size="sm">
-                <a href={`mailto:${instructor.email}`}>
-                  <Mail aria-hidden /> E-posta
-                </a>
-              </Button>
-              {instructor.socialLinks.map((link) => (
-                <Button key={link.network} asChild variant="outline" size="sm">
-                  <a href={link.url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink aria-hidden /> {link.label}
-                  </a>
-                </Button>
-              ))}
-            </div>
-          </CardContent>
+      <div className="grid gap-6 lg:grid-cols-5">
+        <Card className="px-6 lg:col-span-2 lg:self-start">
+          <PersonHeader person={instructor} />
         </Card>
 
         <Card className="lg:col-span-3">

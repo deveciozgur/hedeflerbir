@@ -29,7 +29,7 @@ export default async function InstructorCoursesPage() {
             <li key={course.id}>
               <Link
                 href={`/instructor/courses/${course.id}`}
-                className="flex h-full flex-col gap-4 rounded-xl border bg-card p-5 shadow-xs transition-[border-color,box-shadow] outline-none hover:border-foreground/20 hover:shadow-sm focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                className="flex h-full flex-col gap-4 rounded-xl border bg-card p-5 shadow-xs transition-[border-color,box-shadow] outline-none hover:border-border-strong hover:bg-zinc-900/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <div className="flex flex-col gap-1.5">
                   <h2 className="text-base font-semibold tracking-tight">{course.title}</h2>

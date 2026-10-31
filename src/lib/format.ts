@@ -23,6 +23,17 @@ export const formatWeekday = (date: Date) => weekdayFormatter.format(date);
 export const formatDayNumber = (date: Date) => dayNumberFormatter.format(date);
 export const formatLongDay = (date: Date) => longDayFormatter.format(date);
 
+/** "Bugün" / "Yarın" / "3 Kasım Salı", in the platform time zone. */
+export function relativeDayLabel(date: Date, now: Date = new Date()): string {
+  const key = dayKey(date);
+  if (key === dayKey(now)) return "Bugün";
+  if (key === dayKey(new Date(now.getTime() + 86_400_000))) return "Yarın";
+  return formatLongDay(date);
+}
+
+/** "14:00 - 14:45" */
+export const formatTimeRange = (start: Date, end: Date) => `${formatTime(start)} - ${formatTime(end)}`;
+
 export const formatDate = (date: Date) => dateFormatter.format(date);
 export const formatDateTime = (date: Date) => dateTimeFormatter.format(date);
 export const formatTime = (date: Date) => timeFormatter.format(date);

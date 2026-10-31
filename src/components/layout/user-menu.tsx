@@ -33,7 +33,7 @@ export function UserMenu({ name, surname, email, role, avatarUrl, profileHref }:
     <>
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         aria-label="Hesap menüsü"
       >
         <Avatar>

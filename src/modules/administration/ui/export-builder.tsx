@@ -43,7 +43,7 @@ export function ExportBuilder({ courses }: { courses: Array<{ id: string; title:
             <label
               key={id}
               className={cn(
-                "flex cursor-pointer gap-3 rounded-xl border bg-card p-4 transition-colors has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50",
+                "flex cursor-pointer gap-3 rounded-xl border bg-card p-4 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background",
                 checked ? "border-brand bg-brand/5" : "hover:bg-accent/50",
               )}
             >

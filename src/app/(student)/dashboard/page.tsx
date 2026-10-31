@@ -3,9 +3,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import { getViewer } from "@/modules/identity/application/viewer.queries";
 import { getStudentDashboard } from "@/modules/learning/application/student-dashboard.queries";
 import { AnnouncementsCard } from "@/modules/learning/ui/announcements-card";
-import { ContinueWatching } from "@/modules/learning/ui/continue-watching";
+import { ChronosTimeline } from "@/modules/learning/ui/chronos-timeline";
+import { DASHBOARD_GRID } from "@/modules/learning/ui/dashboard-grid";
 import { HeroProgress } from "@/modules/learning/ui/hero-progress";
-import { UpcomingAgenda } from "@/modules/learning/ui/upcoming-agenda";
+import { ResumeCard } from "@/modules/learning/ui/resume-card";
 
 export const metadata: Metadata = { title: "Ana Sayfa" };
 
@@ -17,18 +18,14 @@ export default async function StudentDashboardPage() {
     <div className="flex flex-col gap-8">
       <PageHeader title={`Merhaba, ${dashboard.firstName}`} description="Bugün hedeflerine bir adım daha yaklaş." />
 
-      <section aria-label="İlerleme ve devam et" className="grid gap-4 lg:grid-cols-3">
+      <section aria-label="İlerleme ve devam et" className={DASHBOARD_GRID.top}>
         <HeroProgress overall={dashboard.overall} projects={dashboard.projects} />
-        <ContinueWatching item={dashboard.continueWatching} />
+        <ResumeCard target={dashboard.resume} />
       </section>
 
-      <section aria-label="Takvim ve duyurular" className="grid gap-4 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <UpcomingAgenda items={dashboard.agenda} />
-        </div>
-        <div className="lg:col-span-2">
-          <AnnouncementsCard items={dashboard.announcements} />
-        </div>
+      <section aria-label="Zaman akışı ve duyurular" className={DASHBOARD_GRID.bottom}>
+        <ChronosTimeline items={dashboard.agenda} />
+        <AnnouncementsCard items={dashboard.announcements} />
       </section>
     </div>
   );

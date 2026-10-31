@@ -24,12 +24,12 @@ export function StudentAppointments({ appointments }: { appointments: StudentApp
             const cancellable = canCancel({ status: "CONFIRMED", startTime: a.startTime }).allowed;
             return (
               <li key={a.id} className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center">
-                <Link href={`/mentors/${a.mentor.id}`} className="flex min-w-0 flex-1 items-center gap-3 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                <Link href={`/mentors/${a.mentor.id}`} className="flex min-w-0 flex-1 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                   <UserAvatar user={a.mentor} />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium">{fullName(a.mentor)}</span>
                     <time dateTime={a.startTime.toISOString()} className="block text-xs tabular-nums text-muted-foreground">
-                      {formatDateTime(a.startTime)} – {formatTime(a.endTime)}
+                      {formatDateTime(a.startTime)} - {formatTime(a.endTime)}
                     </time>
                   </span>
                 </Link>

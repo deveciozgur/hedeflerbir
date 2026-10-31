@@ -10,4 +10,8 @@ export const initials = (name: string, surname: string) =>
 
 export const fullName = (person: { name: string; surname: string }) => `${person.name} ${person.surname}`;
 
-export const clamp = (value: number, min = 0, max = 100) => Math.min(max, Math.max(min, value));
+/** "Unity · C# · Oyun Mimarisi" → ["Unity", "C#", "Oyun Mimarisi"] (also splits on commas and slashes). */
+export const splitTags = (value: string | null | undefined) =>
+  (value ?? "").split(/[·,/|]/).map((t) => t.trim()).filter(Boolean);
+
+export const clamp =(value: number, min = 0, max = 100) => Math.min(max, Math.max(min, value));

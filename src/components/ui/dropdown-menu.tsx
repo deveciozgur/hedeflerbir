@@ -1,5 +1,3 @@
-"use client";
-
 import type { ComponentProps } from "react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { cn } from "@/lib/utils";
@@ -17,8 +15,8 @@ export function DropdownMenuContent({
       <DropdownMenuPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          "z-50 min-w-48 overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out",
+          "z-50 min-w-48 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-lg border border-border-strong/60 bg-popover p-1 text-popover-foreground shadow-xl shadow-zinc-950/50",
+          "data-[state=closed]:animate-exit data-[state=open]:animate-enter",
           className,
         )}
         {...props}

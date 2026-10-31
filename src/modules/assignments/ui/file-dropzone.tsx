@@ -33,13 +33,13 @@ export function FileDropzone({ file, onFileChange, disabled }: FileDropzoneProps
 
   if (file) {
     return (
-      <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-md border bg-background" aria-hidden>
+      <div className="flex animate-enter items-center gap-3 rounded-lg border border-border-strong/70 bg-zinc-900/60 p-3">
+        <span className="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-zinc-950" aria-hidden>
           <Paperclip className="size-4 text-muted-foreground" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{file.name}</p>
-          <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
+          <p className="font-mono text-xs text-subtle tabular-nums">{formatBytes(file.size)}</p>
         </div>
         <Button type="button" variant="ghost" size="icon" onClick={() => onFileChange(null)} disabled={disabled} aria-label="Dosyayı kaldır">
           <X />
@@ -56,19 +56,30 @@ export function FileDropzone({ file, onFileChange, disabled }: FileDropzoneProps
           event.preventDefault();
           if (!disabled) setDragging(true);
         }}
-        onDragLeave={() => setDragging(false)}
+        onDragLeave={(event) => {
+          // Ignore leave events fired when the pointer crosses into a child element.
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+        }}
         onDrop={onDrop}
         className={cn(
-          "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-8 text-center transition-colors",
-          "has-[:focus-visible]:border-ring has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/40",
-          dragging ? "border-brand bg-brand/5" : "hover:bg-muted/50",
+          "group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-8 text-center transition-[border-color,background-color,transform] duration-150 ease-out-expo",
+          "has-[:focus-visible]:border-ring has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background",
+          dragging ? "scale-[1.01] border-brand bg-brand/5" : "border-zinc-700 hover:border-zinc-500 hover:bg-zinc-900/40",
           error && "border-destructive/50",
           disabled && "pointer-events-none opacity-50",
         )}
       >
-        <FileUp className={cn("size-6", dragging ? "text-brand" : "text-muted-foreground")} aria-hidden />
-        <span className="text-sm font-medium">Dosyayı sürükle bırak veya seç</span>
-        <span className="text-xs text-muted-foreground">PDF, ZIP, Office veya görsel · en fazla 20 MB</span>
+        <span
+          className={cn(
+            "mb-2 grid size-10 place-items-center rounded-lg border transition-[transform,border-color,color] duration-150 ease-out-expo",
+            dragging ? "-translate-y-1 border-brand/50 text-brand-soft" : "border-border bg-zinc-900 text-muted-foreground group-hover:-translate-y-0.5",
+          )}
+          aria-hidden
+        >
+          <FileUp className="size-5" />
+        </span>
+        <span className="text-sm font-medium">{dragging ? "Bırak, yükleyelim" : "Dosyayı sürükle bırak veya seç"}</span>
+        <span className="text-xs text-subtle">PDF, ZIP, Office veya görsel, en fazla 20 MB</span>
         <input
           id={inputId}
           type="file"

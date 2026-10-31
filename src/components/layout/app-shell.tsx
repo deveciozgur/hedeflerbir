@@ -26,13 +26,13 @@ export async function AppShell({ variant, viewer, children }: AppShellProps) {
         İçeriğe geç
       </a>
 
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-8 border-r border-sidebar-border bg-sidebar px-3 py-4 lg:flex">
-        <Brand subtitle={SHELL_LABEL[variant]} className="px-2.5" />
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-8 border-r border-sidebar-border bg-sidebar px-4 py-6 lg:flex">
+        <Brand subtitle={SHELL_LABEL[variant]} className="px-2" />
         <SidebarNav variant={variant} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur-md sm:px-6">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/75 px-4 backdrop-blur-md sm:px-6 lg:px-12">
           <MobileNav variant={variant} />
           <Brand subtitle={SHELL_LABEL[variant]} className="lg:hidden" />
           <div className="ml-auto flex items-center gap-1">
@@ -48,7 +48,7 @@ export async function AppShell({ variant, viewer, children }: AppShellProps) {
           </div>
         </header>
 
-        <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-10">
+        <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-12 lg:py-12">
           {children}
         </main>
       </div>

@@ -1,70 +1,56 @@
 @import "tailwindcss";
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
-
-/* ── Design tokens · neutral zinc scale + one indigo brand accent ── */
+/*
+ * HedeflerBir design tokens - deep neutral (zinc) surfaces, one indigo accent.
+ * Dark is the product theme. Contrast targets (WCAG 2.1 AA) are noted inline,
+ * measured against --background (zinc-950).
+ */
 :root {
-  --radius: 0.625rem;
+  color-scheme: dark;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.505 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.56 0.15 152);
-  --warning: oklch(0.65 0.16 65);
-  --brand: oklch(0.51 0.21 270);
+  /* Surfaces */
+  --background: oklch(0.141 0.005 285.823);           /* zinc-950 */
+  --card: oklch(0.21 0.006 285.885 / 0.6);            /* zinc-900 @ 60%, paired with backdrop-blur */
+  --card-foreground: oklch(0.967 0.001 286.375);
+  --popover: oklch(0.21 0.006 285.885);               /* solid zinc-900 for overlays */
+  --popover-foreground: oklch(0.967 0.001 286.375);
+  --accent: oklch(0.244 0.006 285.96);                /* "zinc-850" hover surface */
+  --accent-foreground: oklch(0.967 0.001 286.375);
+  --muted: oklch(0.274 0.006 286.033);                /* zinc-800: tracks, skeletons */
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.92 0.004 286.32);
+
+  /* Text */
+  --foreground: oklch(0.967 0.001 286.375);           /* zinc-100  ~17:1 */
+  --muted-foreground: oklch(0.705 0.015 286.067);     /* zinc-400  ~7.8:1 */
+  --subtle: oklch(0.63 0.014 286);                    /* meta text ~5.6:1 (zinc-500 is only ~4.1:1) */
+
+  /* Lines */
+  --border: oklch(0.274 0.006 286.033 / 0.8);         /* zinc-800/80 */
+  --border-strong: oklch(0.37 0.013 285.805);         /* zinc-700 */
+  --input: oklch(0.274 0.006 286.033);
+  --ring: oklch(0.705 0.015 286.067);                 /* zinc-400 focus ring */
+
+  /* Accent: indigo. Fills use 500; text/labels use 300 for contrast on tinted chips. */
+  --brand: oklch(0.585 0.233 277.117);                /* #6366F1 */
+  --brand-soft: oklch(0.785 0.115 274.713);           /* indigo-300 text ~9:1 */
   --brand-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.51 0.21 270);
+  --primary: oklch(0.511 0.262 276.966);              /* indigo-600 button fill, white text ~6.3:1 */
+  --primary-foreground: oklch(0.985 0 0);
 
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-accent: oklch(0.955 0.002 286.375);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-}
+  /* Status (reserved for state, never decoration) */
+  --success: oklch(0.765 0.177 163.223);              /* emerald-400 */
+  --warning: oklch(0.828 0.189 84.429);               /* amber-400 */
+  --destructive: oklch(0.704 0.191 22.216);           /* red-400 text */
+  --destructive-solid: oklch(0.577 0.245 27.325);     /* red-600 fill, white text ~4.8:1 */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.141 0.005 285.823);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.18 0.006 285.885);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.21 0.006 285.885);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.92 0.004 286.32);
-    --primary-foreground: oklch(0.21 0.006 285.885);
-    --secondary: oklch(0.274 0.006 286.033);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.274 0.006 286.033);
-    --muted-foreground: oklch(0.72 0.015 286.067);
-    --accent: oklch(0.274 0.006 286.033);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --success: oklch(0.72 0.15 152);
-    --warning: oklch(0.8 0.15 75);
-    --brand: oklch(0.68 0.17 270);
-    --brand-foreground: oklch(0.141 0.005 285.823);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.68 0.17 270);
+  --sidebar: oklch(0.141 0.005 285.823);
+  --sidebar-foreground: oklch(0.967 0.001 286.375);
+  --sidebar-accent: oklch(0.21 0.006 285.885);
+  --sidebar-border: oklch(0.274 0.006 286.033 / 0.8);
 
-    --sidebar: oklch(0.16 0.005 285.823);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.24 0.006 286.033);
-    --sidebar-border: oklch(1 0 0 / 8%);
-  }
+  /* Motion: one curve for every overlay (modal, dropdown, popover, tooltip). */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @theme inline {
@@ -83,14 +69,18 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-subtle: var(--subtle);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-solid: var(--destructive-solid);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
   --color-brand-foreground: var(--brand-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-sidebar: var(--sidebar);
@@ -98,38 +88,74 @@
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-border: var(--sidebar-border);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Shape lock: controls 8px, cards 12px, chips/pills full. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+
+  --ease-out-expo: var(--ease-out-expo);
 
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-enter: enter 150ms var(--ease-out-expo);
+  --animate-exit: exit 120ms var(--ease-out-expo) forwards;
+  --animate-fade-in: fade-in 150ms var(--ease-out-expo);
+  --animate-fade-out: fade-out 120ms var(--ease-out-expo) forwards;
 
   @keyframes shimmer {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    50% { opacity: 0.55; }
+  }
+  /* `scale` (not transform) so it composes with translate-based centering. */
+  @keyframes enter {
+    from { opacity: 0; scale: 0.98; }
+    to { opacity: 1; scale: 1; }
+  }
+  @keyframes exit {
+    from { opacity: 1; scale: 1; }
+    to { opacity: 0; scale: 0.98; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
   }
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
-  }
-  html {
-    color-scheme: light dark;
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: "cv11", "ss01";
   }
+  h1, h2, h3 {
+    @apply text-foreground;
+  }
   ::selection {
-    @apply bg-brand/20;
+    @apply bg-brand/30 text-foreground;
+  }
+  :focus-visible {
+    outline: none;
+  }
+}
+
+/* Translucent surfaces need a solid fallback when transparency is reduced. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --card: oklch(0.21 0.006 285.885);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -84,7 +84,7 @@ export function AttendanceDialog({ session, roster }: { session: InstructorSessi
                       aria-checked={checked}
                       onClick={() => setRecords((prev) => ({ ...prev, [student.id]: status }))}
                       className={cn(
-                        "h-7 rounded px-2 text-xs font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                        "h-7 rounded px-2 text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                         checked
                           ? status === "ABSENT"
                             ? "bg-destructive/10 text-destructive"

@@ -6,7 +6,7 @@ export function Toaster() {
   return (
     <Sonner
       position="bottom-right"
-      theme="system"
+      theme="dark"
       toastOptions={{
         classNames: {
           toast: "!rounded-lg !border !border-border !bg-popover !text-popover-foreground !shadow-lg",

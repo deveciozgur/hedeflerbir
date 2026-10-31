@@ -29,7 +29,7 @@ export function SessionStage({ session, startAt }: { session: CurriculumSession;
         <div className="flex flex-col items-center gap-2">
           <Badge variant={live ? "destructive" : "brand"}>{live ? "Canlı" : formatRelative(session.scheduleDate)}</Badge>
           <p className="text-sm font-medium">
-            <time dateTime={session.scheduleDate.toISOString()}>{formatDateTime(session.scheduleDate)}</time> – {formatTime(end)}
+            <time dateTime={session.scheduleDate.toISOString()}>{formatDateTime(session.scheduleDate)}</time> - {formatTime(end)}
           </p>
           <p className="max-w-sm text-sm text-muted-foreground">
             {live ? "Ders şu an devam ediyor." : "Canlı ders bağlantısı ders saatinde aktif olur. Kayıt, dersten sonra burada yayınlanır."}

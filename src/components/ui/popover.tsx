@@ -1,5 +1,3 @@
-"use client";
-
 import type { ComponentProps } from "react";
 import { Popover as PopoverPrimitive } from "radix-ui";
 import { cn } from "@/lib/utils";
@@ -14,7 +12,8 @@ export function PopoverContent({ className, align = "end", sideOffset = 8, ...pr
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "z-50 w-[min(24rem,calc(100vw-2rem))] rounded-xl border bg-popover text-popover-foreground shadow-lg outline-none",
+          "z-50 w-[min(24rem,calc(100vw-2rem))] origin-(--radix-popover-content-transform-origin) rounded-xl border border-border-strong/60 bg-popover text-popover-foreground shadow-xl shadow-zinc-950/50 outline-none",
+          "data-[state=closed]:animate-exit data-[state=open]:animate-enter",
           className,
         )}
         {...props}

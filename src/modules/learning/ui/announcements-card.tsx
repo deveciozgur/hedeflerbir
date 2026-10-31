@@ -7,7 +7,7 @@ import type { AnnouncementSummary } from "../application/student-dashboard.queri
 
 export function AnnouncementsCard({ items }: { items: AnnouncementSummary[] }) {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>Duyurular</CardTitle>
       </CardHeader>
@@ -17,14 +17,14 @@ export function AnnouncementsCard({ items }: { items: AnnouncementSummary[] }) {
         ) : (
           <ul className="flex flex-col divide-y">
             {items.map((item) => (
-              <li key={item.id} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
+              <li key={item.id} className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0">
                 <div className="flex items-center gap-2">
                   {item.pinned ? (
-                    <Badge variant="brand">
+                    <Badge variant="outline">
                       <Pin aria-hidden /> Sabit
                     </Badge>
                   ) : null}
-                  <time dateTime={item.publishedAt.toISOString()} className="text-xs text-muted-foreground">
+                  <time dateTime={item.publishedAt.toISOString()} className="font-mono text-xs text-subtle">
                     {formatRelative(item.publishedAt)}
                   </time>
                 </div>

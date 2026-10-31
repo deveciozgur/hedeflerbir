@@ -7,7 +7,7 @@ import {
   getStudentUpcomingAppointments,
   listMentors,
 } from "@/modules/mentoring/application/mentor-directory.queries";
-import { MentorCard } from "@/modules/mentoring/ui/mentor-card";
+import { MentorDirectory } from "@/modules/mentoring/ui/mentor-directory";
 import { StudentAppointments } from "@/modules/mentoring/ui/student-appointments";
 
 export const metadata: Metadata = { title: "Mentorlar" };
@@ -30,13 +30,7 @@ export default async function MentorsPage() {
         />
       ) : (
         <section aria-label="Mentor listesi">
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {mentors.map((mentor) => (
-              <li key={mentor.id}>
-                <MentorCard mentor={mentor} />
-              </li>
-            ))}
-          </ul>
+          <MentorDirectory mentors={mentors} />
         </section>
       )}
     </div>

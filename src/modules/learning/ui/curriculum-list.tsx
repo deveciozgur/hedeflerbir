@@ -30,7 +30,7 @@ export function CurriculumList({ slug, sessions, activeId }: { slug: string; ses
                 scroll={false}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                  "flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   active ? "bg-accent" : "hover:bg-accent/50",
                 )}
               >

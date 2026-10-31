@@ -19,8 +19,8 @@ export function MobileNav({ variant }: { variant: ShellVariant }) {
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] lg:hidden" />
-        <Dialog.Content className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col gap-6 border-r bg-sidebar p-4 shadow-xl outline-none lg:hidden">
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-zinc-950/70 backdrop-blur-sm data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in lg:hidden" />
+        <Dialog.Content className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col gap-6 border-r border-border bg-sidebar p-4 shadow-2xl outline-none data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in lg:hidden">
           <div className="flex items-center justify-between">
             <Brand subtitle={SHELL_LABEL[variant]} />
             <Dialog.Close asChild>

@@ -53,7 +53,7 @@ export function GradingForm({ maxScore, defaultGrade, defaultFeedback, pending, 
 
   return (
     <form onSubmit={submitWith("GRADED")} noValidate className="flex flex-col gap-4">
-      <FormField id="grade" label={`Puan (0–${maxScore})`} error={errors.grade?.message}>
+      <FormField id="grade" label={`Puan (0-${maxScore})`} error={errors.grade?.message}>
         <Input
           id="grade"
           inputMode="numeric"

@@ -44,7 +44,7 @@ export function ThreadList({ threads, basePath, activeId, query = "" }: ThreadLi
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="flex items-baseline gap-2">
                   <span className={cn("truncate text-sm", thread.unread > 0 ? "font-semibold" : "font-medium")}>
-                    {first ? fullName(first) : "—"}
+                    {first ? fullName(first) : "-"}
                     {second ? <span className="font-normal text-muted-foreground"> ↔ {fullName(second)}</span> : null}
                   </span>
                   <time dateTime={thread.lastAt.toISOString()} className="ml-auto shrink-0 text-[11px] text-muted-foreground">

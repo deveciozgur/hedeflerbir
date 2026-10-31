@@ -51,7 +51,7 @@ export default async function StudentProfilePage() {
         <StatTile icon={Award} label="Rozetler" value={`${earned}/${overview.badges.length}`} />
         <StatTile icon={ClipboardCheck} label="Teslim edilen ödev" value={String(stats.submitted)} />
         <StatTile icon={PlayCircle} label="İzlenen kayıt" value={String(stats.watchedRecordings)} />
-        <StatTile icon={CalendarCheck} label="Devam oranı" value={attendance === null ? "—" : `%${attendance}`} />
+        <StatTile icon={CalendarCheck} label="Devam oranı" value={attendance === null ? "-" : `%${attendance}`} />
       </section>
 
       <Card>
@@ -80,7 +80,7 @@ export default async function StudentProfilePage() {
                       <span className="w-10 shrink-0 text-right text-sm tabular-nums">%{project.completionPercentage}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {formatDate(project.startDate)} – {formatDate(project.endDate)}
+                      {formatDate(project.startDate)} - {formatDate(project.endDate)}
                     </p>
                   </li>
                 );

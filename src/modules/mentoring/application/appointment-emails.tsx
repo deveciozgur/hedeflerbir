@@ -18,7 +18,7 @@ export interface AppointmentEmailContext {
   notes?: string | null;
 }
 
-const when = (ctx: AppointmentEmailContext) => `${formatDateTime(ctx.startTime)} – ${formatTime(ctx.endTime)}`;
+const when = (ctx: AppointmentEmailContext) => `${formatDateTime(ctx.startTime)} - ${formatTime(ctx.endTime)}`;
 
 const fullName = (p: Party) => `${p.name} ${p.surname}`;
 

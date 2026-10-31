@@ -9,7 +9,7 @@ import { getAdminAnalytics } from "@/modules/administration/application/analytic
 
 export const metadata: Metadata = { title: "Analitik" };
 
-const pct = (value: number | null) => (value === null ? "—" : `%${value}`);
+const pct = (value: number | null) => (value === null ? "-" : `%${value}`);
 
 export default async function AdminAnalyticsPage() {
   await getViewer("ADMIN");

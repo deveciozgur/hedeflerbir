@@ -53,7 +53,7 @@ export default async function InstructorOverviewPage() {
                   <li key={s.id}>
                     <Link
                       href={`/instructor/assignments/${s.assignmentId}`}
-                      className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{s.studentName}</span>
@@ -84,7 +84,7 @@ export default async function InstructorOverviewPage() {
                   <li key={s.id}>
                     <Link
                       href={`/instructor/courses/${s.courseId}`}
-                      className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
                       <CalendarClock className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                       <span className="min-w-0 flex-1">

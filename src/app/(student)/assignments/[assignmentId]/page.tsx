@@ -23,7 +23,7 @@ export default async function AssignmentDetailPage({ params }: { params: Promise
       <div className="flex flex-col gap-4">
         <Link
           href="/assignments"
-          className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <ArrowLeft className="size-4" aria-hidden /> Ödevler
         </Link>

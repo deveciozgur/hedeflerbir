@@ -21,7 +21,7 @@ export default async function AdminCourseDetailPage({ params }: { params: Promis
       <div className="flex flex-col gap-4">
         <Link
           href="/admin/courses"
-          className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <ArrowLeft className="size-4" aria-hidden /> Eğitimler
         </Link>
@@ -35,7 +35,7 @@ export default async function AdminCourseDetailPage({ params }: { params: Promis
                   <UserAvatar user={instructor} className="size-6" /> {fullName(instructor)}
                 </>
               ) : (
-                <span className="text-warning">Eğitmen aktif değil — yeni bir eğitmen atayın.</span>
+                <span className="text-warning">Eğitmen aktif değil. Yeni bir eğitmen atayın.</span>
               )}
             </p>
           </div>

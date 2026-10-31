@@ -22,7 +22,7 @@ interface PageProps {
   searchParams: Promise<{ tab?: string }>;
 }
 
-const percent = (value: number | null) => (value === null ? "—" : `%${value}`);
+const percent = (value: number | null) => (value === null ? "-" : `%${value}`);
 
 export default async function InstructorCoursePage({ params, searchParams }: PageProps) {
   const [{ courseId }, { tab }, viewer] = await Promise.all([params, searchParams, getViewer("INSTRUCTOR")]);
@@ -36,7 +36,7 @@ export default async function InstructorCoursePage({ params, searchParams }: Pag
       <div className="flex flex-col gap-4">
         <Link
           href="/instructor/courses"
-          className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <ArrowLeft className="size-4" aria-hidden /> Eğitimlerim
         </Link>
@@ -50,8 +50,8 @@ export default async function InstructorCoursePage({ params, searchParams }: Pag
               label="Görünüm"
               value={view}
               options={[
-                { value: "sessions", label: "Oturumlar", href: base, icon: Layers },
-                { value: "roster", label: `Katılımcılar (${course.roster.length})`, href: `${base}?tab=roster`, icon: Users },
+                { value: "sessions", label: "Oturumlar", href: base, icon: <Layers /> },
+                { value: "roster", label: `Katılımcılar (${course.roster.length})`, href: `${base}?tab=roster`, icon: <Users /> },
               ]}
             />
             {view === "sessions" ? (

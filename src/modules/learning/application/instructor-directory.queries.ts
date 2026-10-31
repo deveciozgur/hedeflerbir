@@ -13,28 +13,14 @@ export interface InstructorCardModel {
   courseCount: number;
 }
 
-export async function listInstructorsForStudents(): Promise<InstructorCardModel[]> {
+/** Directory payload: the full profile per instructor, so a card opens its modal without a round-trip. */
+export async function listInstructorsForStudents(studentId: string): Promise<InstructorDetail[]> {
   const instructors = await db.user.findMany({
     where: { role: "INSTRUCTOR", isActive: true },
     orderBy: [{ name: "asc" }, { surname: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      surname: true,
-      avatarUrl: true,
-      profile: { select: { title: true, expertiseArea: true } },
-      _count: { select: { taughtCourses: true } },
-    },
+    select: instructorSelect(studentId),
   });
-  return instructors.map((i) => ({
-    id: i.id,
-    name: i.name,
-    surname: i.surname,
-    avatarUrl: i.avatarUrl,
-    title: i.profile?.title ?? null,
-    expertiseArea: i.profile?.expertiseArea ?? null,
-    courseCount: i._count.taughtCourses,
-  }));
+  return instructors.map(toDetail);
 }
 
 export interface InstructorDetail extends InstructorCardModel {
@@ -44,32 +30,45 @@ export interface InstructorDetail extends InstructorCardModel {
   courses: Array<{ id: string; slug: string; title: string; description: string; sessionCount: number; enrolled: boolean }>;
 }
 
-/** `enrolled` tells the UI whether the viewing student can open the course page. */
-export async function getInstructorForStudent(instructorId: string, studentId: string): Promise<InstructorDetail> {
-  const instructor = await db.user.findFirst({
-    where: { id: instructorId, role: "INSTRUCTOR", isActive: true },
-    select: {
-      id: true,
-      name: true,
-      surname: true,
-      email: true,
-      avatarUrl: true,
-      profile: { select: { title: true, expertiseArea: true, bio: true, socialLinks: true } },
-      taughtCourses: {
-        orderBy: { title: "asc" },
-        select: {
-          id: true,
-          slug: true,
-          title: true,
-          description: true,
-          _count: { select: { sessions: true } },
-          enrollments: { where: { studentId }, select: { studentId: true } },
-        },
+const instructorSelect = (studentId: string) =>
+  ({
+    id: true,
+    name: true,
+    surname: true,
+    email: true,
+    avatarUrl: true,
+    profile: { select: { title: true, expertiseArea: true, bio: true, socialLinks: true } },
+    taughtCourses: {
+      orderBy: { title: "asc" },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        description: true,
+        _count: { select: { sessions: true } },
+        enrollments: { where: { studentId }, select: { studentId: true } },
       },
     },
-  });
-  if (!instructor) notFound();
+  }) as const;
 
+type InstructorRow = {
+  id: string;
+  name: string;
+  surname: string;
+  email: string;
+  avatarUrl: string | null;
+  profile: { title: string | null; expertiseArea: string | null; bio: string | null; socialLinks: unknown } | null;
+  taughtCourses: Array<{
+    id: string;
+    slug: string;
+    title: string;
+    description: string;
+    _count: { sessions: number };
+    enrollments: Array<{ studentId: string }>;
+  }>;
+};
+
+function toDetail(instructor: InstructorRow): InstructorDetail {
   return {
     id: instructor.id,
     name: instructor.name,
@@ -90,4 +89,14 @@ export async function getInstructorForStudent(instructorId: string, studentId: s
       enrolled: c.enrollments.length > 0,
     })),
   };
+}
+
+/** `enrolled` tells the UI whether the viewing student can open the course page. */
+export async function getInstructorForStudent(instructorId: string, studentId: string): Promise<InstructorDetail> {
+  const instructor = await db.user.findFirst({
+    where: { id: instructorId, role: "INSTRUCTOR", isActive: true },
+    select: instructorSelect(studentId),
+  });
+  if (!instructor) notFound();
+  return toDetail(instructor);
 }

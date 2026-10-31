@@ -10,7 +10,7 @@ import { getInstructorStudents } from "@/modules/learning/application/instructor
 
 export const metadata: Metadata = { title: "Katılımcılar" };
 
-const pct = (value: number | null) => (value === null ? "—" : `%${value}`);
+const pct = (value: number | null) => (value === null ? "-" : `%${value}`);
 
 export default async function InstructorStudentsPage() {
   const viewer = await getViewer("INSTRUCTOR");
@@ -52,7 +52,7 @@ export default async function InstructorStudentsPage() {
                     </span>
                   </td>
                   <td className="max-w-64 px-3 py-3 text-xs text-muted-foreground">
-                    <span className="line-clamp-2">{s.goals ?? "—"}</span>
+                    <span className="line-clamp-2">{s.goals ?? "-"}</span>
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums">{pct(s.attendanceRate)}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{s.watched}</td>

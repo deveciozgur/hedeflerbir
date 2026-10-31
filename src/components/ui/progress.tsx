@@ -1,5 +1,3 @@
-"use client";
-
 import type { ComponentProps } from "react";
 import { Progress as ProgressPrimitive } from "radix-ui";
 import { cn, clamp } from "@/lib/utils";
