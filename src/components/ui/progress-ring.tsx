@@ -47,7 +47,7 @@ export function ProgressRing({ value, size = 128, strokeWidth = 8, label }: Prog
       style={{ width: size, height: size }}
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden>
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={strokeWidth} className="stroke-zinc-800" />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={strokeWidth} className="stroke-track" />
         <motion.circle
           cx={size / 2}
           cy={size / 2}

@@ -3,6 +3,7 @@ import { PROFILE_HREF, SHELL_LABEL, type ShellVariant } from "@/config/navigatio
 import type { Viewer } from "@/modules/identity/application/viewer.queries";
 import { getRecentNotifications } from "@/modules/notifications/application/notifications.queries";
 import { NotificationBell } from "@/modules/notifications/ui/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Brand } from "./brand";
 import { MobileNav } from "./mobile-nav";
 import { SidebarNav } from "./sidebar-nav";
@@ -36,6 +37,7 @@ export async function AppShell({ variant, viewer, children }: AppShellProps) {
           <MobileNav variant={variant} />
           <Brand subtitle={SHELL_LABEL[variant]} className="lg:hidden" />
           <div className="ml-auto flex items-center gap-1">
+            <ThemeToggle />
             <NotificationBell items={notifications} unreadCount={viewer.unreadNotifications} />
             <UserMenu
               name={viewer.name}

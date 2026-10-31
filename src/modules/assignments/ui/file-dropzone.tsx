@@ -33,8 +33,8 @@ export function FileDropzone({ file, onFileChange, disabled }: FileDropzoneProps
 
   if (file) {
     return (
-      <div className="flex animate-enter items-center gap-3 rounded-lg border border-border-strong/70 bg-zinc-900/60 p-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-zinc-950" aria-hidden>
+      <div className="flex animate-enter items-center gap-3 rounded-lg border border-border-strong/70 bg-surface-raised p-3">
+        <span className="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-background" aria-hidden>
           <Paperclip className="size-4 text-muted-foreground" />
         </span>
         <div className="min-w-0 flex-1">
@@ -64,7 +64,7 @@ export function FileDropzone({ file, onFileChange, disabled }: FileDropzoneProps
         className={cn(
           "group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-8 text-center transition-[border-color,background-color,transform] duration-150 ease-out-expo",
           "has-[:focus-visible]:border-ring has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background",
-          dragging ? "scale-[1.01] border-brand bg-brand/5" : "border-zinc-700 hover:border-zinc-500 hover:bg-zinc-900/40",
+          dragging ? "scale-[1.01] border-brand bg-brand/5" : "border-border-strong hover:border-border-hover hover:bg-surface-raised",
           error && "border-destructive/50",
           disabled && "pointer-events-none opacity-50",
         )}
@@ -72,7 +72,7 @@ export function FileDropzone({ file, onFileChange, disabled }: FileDropzoneProps
         <span
           className={cn(
             "mb-2 grid size-10 place-items-center rounded-lg border transition-[transform,border-color,color] duration-150 ease-out-expo",
-            dragging ? "-translate-y-1 border-brand/50 text-brand-soft" : "border-border bg-zinc-900 text-muted-foreground group-hover:-translate-y-0.5",
+            dragging ? "-translate-y-1 border-brand/50 text-brand-soft" : "border-border bg-surface-raised text-muted-foreground group-hover:-translate-y-0.5",
           )}
           aria-hidden
         >

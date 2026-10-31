@@ -75,10 +75,10 @@ export function ChronosTimeline({ items }: { items: AgendaItem[] }) {
                           {!last ? <span className="absolute top-9 bottom-0 w-px bg-border" /> : null}
                           <span
                             className={cn(
-                              "relative mt-2 grid size-8 place-items-center rounded-full border bg-zinc-950",
+                              "relative mt-2 grid size-8 place-items-center rounded-full border bg-background",
                               status === "live" && "border-brand/50 text-brand-soft",
-                              status === "dueSoon" && "border-amber-500/40 text-amber-400",
-                              status === "confirmed" && "border-emerald-500/40 text-emerald-400",
+                              status === "dueSoon" && "border-warning/40 text-warning",
+                              status === "confirmed" && "border-success/40 text-success",
                               (status === "scheduled" || status === "due") && "border-border-strong text-muted-foreground",
                             )}
                           >

@@ -10,7 +10,7 @@ function AssignmentCardLink({ item }: { item: StudentAssignmentCard }) {
   return (
     <Link
       href={`/assignments/${item.id}`}
-      className="group flex flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-[border-color,background-color] duration-150 outline-none hover:border-border-strong hover:bg-zinc-900/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="group flex flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-[border-color,background-color] duration-150 outline-none hover:border-border-strong hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <div className="flex flex-col gap-1">
         <span className="text-xs text-muted-foreground">{item.courseTitle}</span>
@@ -43,7 +43,7 @@ export function AssignmentBoard({ items }: { items: StudentAssignmentCard[] }) {
           <section
             key={column.id}
             aria-labelledby={`column-${column.id}`}
-            className="flex flex-col gap-3 rounded-xl border border-border bg-zinc-900/30 p-3"
+            className="flex flex-col gap-3 rounded-xl border border-border bg-surface-raised p-3"
           >
             <h2 id={`column-${column.id}`} className="flex items-center justify-between px-1 text-sm font-medium">
               {column.label}

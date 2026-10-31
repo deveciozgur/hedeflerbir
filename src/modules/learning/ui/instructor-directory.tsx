@@ -31,7 +31,7 @@ export function InstructorDirectory({ instructors }: { instructors: InstructorDe
                 onClick={() => setOpenId(instructor.id)}
                 className={cn(
                   surfaceClass,
-                  "flex h-full w-full flex-col gap-4 p-6 text-left outline-none transition-[border-color,background-color] duration-150 hover:border-border-strong hover:bg-zinc-900/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.99]",
+                  "flex h-full w-full flex-col gap-4 p-6 text-left outline-none transition-[border-color,background-color] duration-150 hover:border-border-strong hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.99]",
                 )}
               >
                 <span className="flex items-center gap-3">
@@ -77,7 +77,7 @@ export function InstructorDirectory({ instructors }: { instructors: InstructorDe
               ) : (
                 <ul className="flex flex-col gap-2">
                   {active.courses.map((course) => (
-                    <li key={course.id} className="flex flex-col gap-2 rounded-lg border border-border bg-zinc-950/40 p-4">
+                    <li key={course.id} className="flex flex-col gap-2 rounded-lg border border-border bg-surface-sunken p-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-sm font-medium">{course.title}</span>
                         {course.enrolled ? <Badge variant="success">Kayıtlısın</Badge> : null}

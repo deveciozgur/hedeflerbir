@@ -18,7 +18,7 @@ export function EmptyState({ icon: Icon, title, description, action, className }
         className,
       )}
     >
-      <div className="mb-4 grid size-10 place-items-center rounded-lg border border-border bg-zinc-900">
+      <div className="mb-4 grid size-10 place-items-center rounded-lg border border-border bg-surface-raised">
         <Icon className="size-5 text-muted-foreground" aria-hidden />
       </div>
       <h3 className="text-sm font-semibold">{title}</h3>

@@ -24,7 +24,7 @@ function MentorCard({ mentor, onOpen }: { mentor: MentorProfileModel; onOpen: ()
       aria-haspopup="dialog"
       className={cn(
         surfaceClass,
-        "group flex h-full w-full flex-col gap-4 p-6 text-left outline-none transition-[border-color,background-color] duration-150 hover:border-border-strong hover:bg-zinc-900/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.99]",
+        "group flex h-full w-full flex-col gap-4 p-6 text-left outline-none transition-[border-color,background-color] duration-150 hover:border-border-strong hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.99]",
       )}
     >
       <span className="flex items-center gap-3">

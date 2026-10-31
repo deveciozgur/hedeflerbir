@@ -21,7 +21,7 @@ export function SegmentedLinks({ label, value, options, layoutId = "activeTab" }
   const reduceMotion = useReducedMotion();
 
   return (
-    <nav aria-label={label} className="inline-flex max-w-full gap-1 overflow-x-auto rounded-lg border border-border bg-zinc-900/60 p-1">
+    <nav aria-label={label} className="inline-flex max-w-full gap-1 overflow-x-auto rounded-lg border border-border bg-surface-raised p-1">
       {options.map((option) => {
         const active = option.value === value;
         return (
@@ -39,7 +39,7 @@ export function SegmentedLinks({ label, value, options, layoutId = "activeTab" }
               <motion.span
                 layoutId={layoutId}
                 aria-hidden
-                className="absolute inset-0 rounded-md border border-border-strong/70 bg-zinc-800"
+                className="absolute inset-0 rounded-md border border-border-strong/70 bg-chip-active shadow-sm shadow-shadow dark:shadow-none"
                 transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 40 }}
               />
             ) : null}

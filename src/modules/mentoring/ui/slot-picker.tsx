@@ -42,8 +42,8 @@ export function SlotPicker({ mentorName, slots }: SlotPickerProps) {
 
   if (confirmed) {
     return (
-      <div role="status" className="flex flex-col items-center gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-6 py-8 text-center">
-        <span className="grid size-10 place-items-center rounded-full border border-emerald-500/30 text-emerald-400" aria-hidden>
+      <div role="status" className="flex flex-col items-center gap-4 rounded-xl border border-success/20 bg-success/5 px-6 py-8 text-center">
+        <span className="grid size-10 place-items-center rounded-full border border-success/30 text-success" aria-hidden>
           <Check className="size-5" />
         </span>
         <div className="flex flex-col gap-1">
@@ -107,7 +107,7 @@ export function SlotPicker({ mentorName, slots }: SlotPickerProps) {
               className={cn(
                 choiceClass,
                 "flex w-16 shrink-0 snap-start flex-col items-center gap-1 rounded-xl border py-2 active:scale-[0.98]",
-                active ? "border-brand/60 bg-brand/10 text-foreground" : "border-border bg-zinc-900/60 hover:border-border-strong",
+                active ? "border-brand/60 bg-brand/10 text-foreground" : "border-border bg-surface-raised hover:border-border-strong",
                 open === 0 && !active && "opacity-60",
               )}
             >
@@ -141,7 +141,7 @@ export function SlotPicker({ mentorName, slots }: SlotPickerProps) {
                   choiceClass,
                   "h-10 rounded-md border font-mono text-sm tabular-nums active:scale-[0.98]",
                   slot.isBooked && "cursor-not-allowed border-border line-through opacity-40",
-                  !slot.isBooked && !isSelected && "border-border-strong/70 bg-zinc-900/60 hover:border-zinc-500 hover:bg-zinc-800",
+                  !slot.isBooked && !isSelected && "border-border-strong/70 bg-surface-raised hover:border-border-hover hover:bg-accent",
                   isSelected && "border-brand bg-brand/15 text-foreground",
                 )}
               >

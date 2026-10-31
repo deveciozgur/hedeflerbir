@@ -8,7 +8,7 @@ export function CourseCard({ course }: { course: StudentCourseCard }) {
   return (
     <Link
       href={`/courses/${course.slug}`}
-      className="group flex h-full flex-col gap-4 rounded-xl border bg-card p-5 shadow-xs transition-[border-color,box-shadow] outline-none hover:border-border-strong hover:bg-zinc-900/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="group flex h-full flex-col gap-4 rounded-xl border bg-card p-5 shadow-xs transition-[border-color,box-shadow] outline-none hover:border-border-strong hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <div className="flex flex-col gap-1.5">
         <p className="text-xs text-muted-foreground">{course.instructorName}</p>

@@ -56,7 +56,7 @@ export function ResumeCard({ target }: { target: ResumeTarget }) {
   return (
     <Card className="h-full justify-between gap-6 px-6">
       <div className="flex flex-col gap-4">
-        <span className="grid size-10 place-items-center rounded-lg border border-border-strong bg-zinc-900 text-muted-foreground" aria-hidden>
+        <span className="grid size-10 place-items-center rounded-lg border border-border-strong bg-surface-raised text-muted-foreground" aria-hidden>
           <ClipboardCheck className="size-5" />
         </span>
         <div className="flex min-w-0 flex-col gap-1">

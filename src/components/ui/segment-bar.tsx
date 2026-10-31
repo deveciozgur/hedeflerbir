@@ -33,7 +33,7 @@ export function SegmentBar({ value, label, segments = 20, className }: SegmentBa
       {Array.from({ length: segments }, (_, i) => {
         const on = i < filled;
         return (
-          <span key={i} className="relative rounded-[2px] bg-zinc-800">
+          <span key={i} className="relative rounded-[2px] bg-track">
             {on ? (
               <motion.span
                 className="absolute inset-0 rounded-[2px] bg-brand"
