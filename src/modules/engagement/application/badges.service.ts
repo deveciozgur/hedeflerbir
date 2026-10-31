@@ -1,35 +1,74 @@
 import "server-only";
 import { db } from "@/server/db";
-import { BADGES, EARLY_SUBMISSION_HOURS, earnedBadgeCodes, type StudentStats } from "../domain/badges";
-
-const HOUR = 3_600_000;
+import { BADGES, badgeProgress, earnedBadgeCodes, type BadgeIcon, type StudentStats } from "../domain/badges";
 
 export async function computeStudentStats(studentId: string): Promise<StudentStats> {
-  const [submissions, attendances, watched, mentorSessions, completedProjects] = await Promise.all([
-    db.submission.findMany({
-      where: { studentId },
-      select: { status: true, grade: true, submittedAt: true, assignment: { select: { dueDate: true, maxScore: true } } },
+  const me = await db.user.findUnique({ where: { id: studentId }, select: { teamId: true } });
+  const [attendances, mentorSessions] = await Promise.all([
+    db.sessionAttendance.findMany({ where: { studentId }, select: { status: true, session: { select: { badgeCode: true } } } }),
+    // A team's mentoring session counts for every member of that team.
+    db.appointment.count({
+      where: { status: "COMPLETED", OR: [{ studentId }, ...(me?.teamId ? [{ teamId: me.teamId }] : [])] },
     }),
-    db.sessionAttendance.findMany({ where: { studentId }, select: { status: true } }),
-    db.lessonView.count({ where: { userId: studentId, completed: true } }),
-    db.appointment.count({ where: { studentId, status: "COMPLETED" } }),
-    db.studentProjectProgress.count({ where: { studentId, OR: [{ status: "COMPLETED" }, { completionPercentage: { gte: 100 } }] } }),
   ]);
 
   const counted = attendances.filter((a) => a.status !== "EXCUSED");
   return {
-    submitted: submissions.length,
-    earlySubmissions: submissions.filter(
-      (s) => s.assignment.dueDate.getTime() - s.submittedAt.getTime() >= EARLY_SUBMISSION_HOURS * HOUR,
-    ).length,
-    gradedPercentages: submissions
-      .filter((s) => s.status === "GRADED" && s.grade !== null)
-      .map((s) => ((s.grade ?? 0) / s.assignment.maxScore) * 100),
-    attendance: { present: counted.filter((a) => a.status === "PRESENT").length, counted: counted.length },
-    watchedRecordings: watched,
+    attendedBadgeCodes: attendances.flatMap((a) => (a.status === "PRESENT" && a.session.badgeCode ? [a.session.badgeCode] : [])),
     completedMentorSessions: mentorSessions,
-    completedProjects,
+    attendance: { present: counted.filter((a) => a.status === "PRESENT").length, counted: counted.length },
   };
+}
+
+export interface BadgeView {
+  code: string;
+  name: string;
+  description: string;
+  icon: BadgeIcon;
+  awardedAt: Date | null;
+  progress: number;
+}
+
+/** All programme badges in catalog order, earned (with date) or locked (with progress). */
+export async function getBadgeShowcase(studentId: string): Promise<{ badges: BadgeView[]; stats: StudentStats }> {
+  const [awarded, stats] = await Promise.all([
+    db.userBadge.findMany({ where: { userId: studentId }, select: { awardedAt: true, badge: { select: { code: true } } } }),
+    computeStudentStats(studentId),
+  ]);
+  const awardedAt = new Map(awarded.map((b) => [b.badge.code, b.awardedAt]));
+  return {
+    stats,
+    badges: BADGES.map((b) => ({
+      code: b.code,
+      name: b.name,
+      description: b.description,
+      icon: b.icon,
+      awardedAt: awardedAt.get(b.code) ?? null,
+      progress: awardedAt.has(b.code) ? 1 : badgeProgress(b, stats),
+    })),
+  };
+}
+
+/** Grants (or, for admins correcting a mistake, revokes) one badge by hand. */
+export async function setBadge(studentId: string, code: string, awarded: boolean): Promise<void> {
+  const badge = BADGES.find((b) => b.code === code);
+  if (!badge) throw new Error(`Unknown badge ${code}`);
+  const row = await db.badge.upsert({
+    where: { code },
+    create: { code, name: badge.name, description: badge.description, icon: badge.icon },
+    update: { name: badge.name, description: badge.description, icon: badge.icon },
+    select: { id: true },
+  });
+  if (!awarded) {
+    await db.userBadge.deleteMany({ where: { userId: studentId, badgeId: row.id } });
+    return;
+  }
+  const existing = await db.userBadge.findUnique({ where: { userId_badgeId: { userId: studentId, badgeId: row.id } } });
+  if (existing) return;
+  await db.$transaction([
+    db.userBadge.create({ data: { userId: studentId, badgeId: row.id } }),
+    db.notification.create({ data: { userId: studentId, type: "SYSTEM", title: `Yeni rozet: ${badge.name}`, body: badge.description, href: "/profile" } }),
+  ]);
 }
 
 /**

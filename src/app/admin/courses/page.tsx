@@ -11,7 +11,7 @@ import { getViewer } from "@/modules/identity/application/viewer.queries";
 import { listCoursesForAdmin, listInstructors } from "@/modules/administration/application/course-admin.queries";
 import { CourseFormDialog } from "@/modules/administration/ui/course-form-dialog";
 
-export const metadata: Metadata = { title: "Eğitimler" };
+export const metadata: Metadata = { title: "Programlar" };
 
 export default async function AdminCoursesPage() {
   await getViewer("ADMIN");
@@ -20,14 +20,14 @@ export default async function AdminCoursesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Eğitimler"
-        description="Eğitim oluştur, eğitmen ata ve katılımcıları kaydet."
+        title="Programlar"
+        description="Programları (canlı eğitimlerin bağlı olduğu dönemler) oluştur, sorumlu eğitmeni ata ve katılımcıları kaydet."
         actions={
           <CourseFormDialog
             instructors={instructors}
             trigger={
               <Button>
-                <Plus aria-hidden /> Yeni eğitim
+                <Plus aria-hidden /> Yeni program
               </Button>
             }
           />

@@ -18,7 +18,7 @@ export default async function MentorsPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <PageHeader title="Mentorlar" description="Mentorlarını keşfet ve uygun bir zamana randevu al." />
+      <PageHeader title="Mentorlar" description="Mentorlarını ve müsait saatlerini keşfet. Seanslar program yönetimi tarafından takımına planlanır." />
 
       {appointments.length > 0 ? <StudentAppointments appointments={appointments} /> : null}
 

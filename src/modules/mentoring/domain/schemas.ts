@@ -10,11 +10,16 @@ export const availabilityInputSchema = z.object({
 });
 export type AvailabilityInput = z.infer<typeof availabilityInputSchema>;
 
-export const bookingInputSchema = z.object({
+export const teamBookingSchema = z.object({
   slotId: z.string().min(1),
+  teamId: z.string().min(1, { error: "Bir takım seçin." }),
   notes: z.string().trim().max(1000, { error: "Not en fazla 1000 karakter olabilir." }),
+  /** External meeting link agreed between mentor and team (optional). */
+  meetingLink: z
+    .union([z.literal(""), z.url({ protocol: /^https?$/, error: "Geçerli bir bağlantı girin." })])
+    .transform((v) => v || null),
 });
-export type BookingInput = z.infer<typeof bookingInputSchema>;
+export type TeamBookingInput = z.input<typeof teamBookingSchema>;
 
 export const appointmentIdSchema = z.string().min(1);
 

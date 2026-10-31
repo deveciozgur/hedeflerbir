@@ -1,101 +1,59 @@
 /**
- * Badge catalog — the single source of truth. DB Badge rows are synced from it on demand
+ * HedeflerBir programme badges: the single source of truth. DB Badge rows are synced from it on demand
  * (they exist only so UserBadge has a foreign key).
+ *
+ * Earning ("karma" model):
+ *  - training badges: marked PRESENT at a live training whose `badgeCode` grants it;
+ *  - mentoring badges: the 1st / 2nd / 3rd completed mentoring session (own or the team's);
+ *  - an admin can also award any badge by hand.
  */
 
 export interface StudentStats {
-  submitted: number;
-  earlySubmissions: number;
-  gradedPercentages: number[];
-  attendance: { present: number; counted: number };
-  watchedRecordings: number;
+  /** Badge codes of live trainings the student attended (PRESENT). */
+  attendedBadgeCodes: string[];
+  /** Completed mentoring sessions booked for the student or their team. */
   completedMentorSessions: number;
-  completedProjects: number;
+  attendance: { present: number; counted: number };
 }
 
-export type BadgeIcon = "upload" | "trophy" | "star" | "calendar" | "play" | "compass" | "flag" | "sunrise";
+export type BadgeIcon = "globe" | "lightbulb" | "chart" | "sparkles" | "rocket" | "presentation" | "compass";
 
 export interface BadgeDefinition {
   code: string;
   name: string;
   description: string;
   icon: BadgeIcon;
-  earned: (s: StudentStats) => boolean;
-  /** 0–1, for the locked-badge progress hint. */
-  progress: (s: StudentStats) => number;
+  kind: "training" | "mentoring";
+  /** Mentoring badges: completed sessions needed. */
+  sessions?: number;
 }
 
-const ratio = (value: number, target: number) => Math.min(1, value / target);
-const average = (values: number[]) => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0);
-
-export const EARLY_SUBMISSION_HOURS = 24;
-
 export const BADGES: readonly BadgeDefinition[] = [
-  {
-    code: "first_submission",
-    name: "İlk Teslim",
-    description: "İlk ödevini teslim et.",
-    icon: "upload",
-    earned: (s) => s.submitted >= 1,
-    progress: (s) => ratio(s.submitted, 1),
-  },
-  {
-    code: "early_bird",
-    name: "Erkenci",
-    description: `3 ödevi teslim tarihinden en az ${EARLY_SUBMISSION_HOURS} saat önce teslim et.`,
-    icon: "sunrise",
-    earned: (s) => s.earlySubmissions >= 3,
-    progress: (s) => ratio(s.earlySubmissions, 3),
-  },
-  {
-    code: "perfect_score",
-    name: "Tam Puan",
-    description: "Bir ödevden tam puan al.",
-    icon: "trophy",
-    earned: (s) => s.gradedPercentages.some((p) => p >= 100),
-    progress: (s) => ratio(Math.max(0, ...s.gradedPercentages), 100),
-  },
-  {
-    code: "high_achiever",
-    name: "Yüksek Başarı",
-    description: "En az 3 değerlendirilmiş ödevde %85 ve üzeri ortalama yakala.",
-    icon: "star",
-    earned: (s) => s.gradedPercentages.length >= 3 && average(s.gradedPercentages) >= 85,
-    progress: (s) => Math.min(ratio(s.gradedPercentages.length, 3), ratio(average(s.gradedPercentages), 85)),
-  },
-  {
-    code: "attendance_star",
-    name: "Devam Yıldızı",
-    description: "En az 4 canlı derste %90 ve üzeri devam oranına ulaş.",
-    icon: "calendar",
-    earned: (s) => s.attendance.counted >= 4 && s.attendance.present / s.attendance.counted >= 0.9,
-    progress: (s) =>
-      s.attendance.counted === 0 ? 0 : Math.min(ratio(s.attendance.counted, 4), ratio(s.attendance.present / s.attendance.counted, 0.9)),
-  },
-  {
-    code: "binge_learner",
-    name: "Kayıt Kurdu",
-    description: "5 ders kaydını sonuna kadar izle.",
-    icon: "play",
-    earned: (s) => s.watchedRecordings >= 5,
-    progress: (s) => ratio(s.watchedRecordings, 5),
-  },
-  {
-    code: "mentored",
-    name: "Mentorluk Yolcusu",
-    description: "İlk mentorluk seansını tamamla.",
-    icon: "compass",
-    earned: (s) => s.completedMentorSessions >= 1,
-    progress: (s) => ratio(s.completedMentorSessions, 1),
-  },
-  {
-    code: "project_finisher",
-    name: "Proje Tamamlayan",
-    description: "Bir projeyi %100 tamamla.",
-    icon: "flag",
-    earned: (s) => s.completedProjects >= 1,
-    progress: (s) => ratio(s.completedProjects, 1),
-  },
+  { code: "dunyaya_karsi_sorumluluk", name: "Dünyaya Karşı Sorumluluk", description: "Dünyaya Karşı Sorumluluk eğitimine katıl.", icon: "globe", kind: "training" },
+  { code: "sosyal_inovasyon", name: "Sosyal İnovasyon", description: "Sosyal İnovasyon eğitimine katıl.", icon: "lightbulb", kind: "training" },
+  { code: "sosyal_etki_olcumu", name: "Sosyal Etki Ölçümü", description: "Sosyal Etki Ölçümü eğitimine katıl.", icon: "chart", kind: "training" },
+  { code: "uretken_yapay_zeka", name: "Üretken Yapay Zeka", description: "Üretken Yapay Zeka eğitimine katıl.", icon: "sparkles", kind: "training" },
+  { code: "girisimcilik", name: "Girişimcilik", description: "Girişimcilik eğitimine katıl.", icon: "rocket", kind: "training" },
+  { code: "sunum_teknikleri", name: "Sunum Teknikleri", description: "Sunum Teknikleri eğitimine katıl.", icon: "presentation", kind: "training" },
+  { code: "mentorluk_seansi_1", name: "1. Mentorluk Seansı", description: "İlk mentorluk seansını tamamla.", icon: "compass", kind: "mentoring", sessions: 1 },
+  { code: "mentorluk_seansi_2", name: "2. Mentorluk Seansı", description: "İkinci mentorluk seansını tamamla.", icon: "compass", kind: "mentoring", sessions: 2 },
+  { code: "mentorluk_seansi_3", name: "3. Mentorluk Seansı", description: "Üçüncü mentorluk seansını tamamla.", icon: "compass", kind: "mentoring", sessions: 3 },
 ];
 
-export const earnedBadgeCodes = (stats: StudentStats): string[] => BADGES.filter((b) => b.earned(stats)).map((b) => b.code);
+export const TRAINING_BADGES = BADGES.filter((b) => b.kind === "training");
+
+export const badgeByCode = (code: string | null | undefined) => BADGES.find((b) => b.code === code) ?? null;
+
+export const isBadgeEarned = (badge: BadgeDefinition, stats: StudentStats): boolean =>
+  badge.kind === "training" ? stats.attendedBadgeCodes.includes(badge.code) : stats.completedMentorSessions >= (badge.sessions ?? 1);
+
+/** 0-1 for the locked-badge hint (mentoring badges fill per session; training badges are all-or-nothing). */
+export const badgeProgress = (badge: BadgeDefinition, stats: StudentStats): number =>
+  badge.kind === "training"
+    ? Number(stats.attendedBadgeCodes.includes(badge.code))
+    : Math.min(1, stats.completedMentorSessions / (badge.sessions ?? 1));
+
+export const earnedBadgeCodes = (stats: StudentStats): string[] => BADGES.filter((b) => isBadgeEarned(b, stats)).map((b) => b.code);
+
+/** Attendance rate from live-training roll calls; excused absences don't count. null before the first roll call. */
+export const attendanceRate = (a: StudentStats["attendance"]): number | null => (a.counted ? Math.round((a.present / a.counted) * 100) : null);

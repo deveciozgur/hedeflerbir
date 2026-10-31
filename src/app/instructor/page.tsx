@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpen, CalendarClock, ChevronRight, Clapperboard, Inbox, Users } from "lucide-react";
+import { BookOpen, CalendarClock, ChevronRight, Inbox, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -14,7 +14,6 @@ export const metadata: Metadata = { title: "Genel Bakış" };
 export default async function InstructorOverviewPage() {
   const viewer = await getViewer("INSTRUCTOR");
   const o = await getInstructorOverview(viewer.id);
-  const missingRecordings = o.courses.reduce((sum, c) => sum + c.missingRecordings, 0);
 
   if (o.courses.length === 0) {
     return (
@@ -29,11 +28,10 @@ export default async function InstructorOverviewPage() {
     <div className="flex flex-col gap-8">
       <PageHeader title={`Merhaba, ${viewer.name}`} description="Atanmış eğitimlerin, değerlendirme bekleyen ödevler ve yaklaşan dersler." />
 
-      <section aria-label="Özet" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section aria-label="Özet" className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatTile icon={BookOpen} label="Eğitim" value={String(o.courses.length)} />
         <StatTile icon={Users} label="Katılımcı" value={String(o.studentCount)} />
         <StatTile icon={Inbox} label="Değerlendirme bekleyen" value={String(o.awaitingReviewTotal)} />
-        <StatTile icon={Clapperboard} label="Eksik kayıt" value={String(missingRecordings)} hint="Bitmiş ama kaydı yüklenmemiş" />
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">

@@ -20,8 +20,8 @@ export async function updateStudentProfileAction(input: unknown): Promise<Action
   const parsed = studentProfileSchema.safeParse(input);
   if (!parsed.success) return fail("Lütfen alanları kontrol edin.", z.flattenError(parsed.error).fieldErrors);
 
-  const { name, surname, bio, goals } = parsed.data;
-  const profile = { bio: bio || null, goals: goals || null };
+  const { name, surname, bio, goals, department, city } = parsed.data;
+  const profile = { bio: bio || null, goals: goals || null, department: department || null, city: city || null };
   await db.user.update({
     where: { id: user.id },
     data: { name, surname, profile: { upsert: { create: profile, update: profile } } },
@@ -35,14 +35,12 @@ export async function updateExpertProfileAction(input: unknown): Promise<ActionR
   const parsed = expertProfileSchema.safeParse(input);
   if (!parsed.success) return fail("Lütfen alanları kontrol edin.", z.flattenError(parsed.error).fieldErrors);
 
-  const { name, surname, bio, title, expertiseArea, meetingUrl, socialLinks } = parsed.data;
+  const { name, surname, bio, title, expertiseArea, socialLinks } = parsed.data;
   const profile = {
     bio: bio || null,
     title: title || null,
     expertiseArea: expertiseArea || null,
     socialLinks: compactSocialLinks(socialLinks),
-    // Only mentors run bookable sessions; instructors set meeting links per course session.
-    ...(user.role === "MENTOR" ? { meetingUrl } : {}),
   };
   await db.user.update({
     where: { id: user.id },

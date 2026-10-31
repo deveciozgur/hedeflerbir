@@ -1,17 +1,16 @@
-import { CalendarCheck, Compass, Flag, Lock, PlayCircle, Star, Sunrise, Trophy, Upload, type LucideIcon } from "lucide-react";
+import { BarChart3, Compass, Globe2, Lightbulb, Lock, Presentation, Rocket, Sparkles, type LucideIcon } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { BadgeIcon } from "../domain/badges";
 
 const ICONS: Record<BadgeIcon, LucideIcon> = {
-  upload: Upload,
-  trophy: Trophy,
-  star: Star,
-  calendar: CalendarCheck,
-  play: PlayCircle,
+  globe: Globe2,
+  lightbulb: Lightbulb,
+  chart: BarChart3,
+  sparkles: Sparkles,
+  rocket: Rocket,
+  presentation: Presentation,
   compass: Compass,
-  flag: Flag,
-  sunrise: Sunrise,
 };
 
 export interface BadgeGridItem {
@@ -24,9 +23,9 @@ export interface BadgeGridItem {
 }
 
 /** Earned badges in full color with the award date; locked ones muted with progress toward the criterion. */
-export function BadgeGrid({ badges }: { badges: BadgeGridItem[] }) {
+export function BadgeGrid({ badges, compact = false }: { badges: BadgeGridItem[]; compact?: boolean }) {
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <ul className={cn("grid gap-3", compact ? "grid-cols-3 sm:grid-cols-5 xl:grid-cols-9" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5")}>
       {badges.map((badge) => {
         const Icon = ICONS[badge.icon];
         const earned = badge.awardedAt !== null;
@@ -54,8 +53,8 @@ export function BadgeGrid({ badges }: { badges: BadgeGridItem[] }) {
               {badge.name}
               <span className="sr-only">{earned ? " (kazanıldı)" : " (kilitli)"}</span>
             </span>
-            <span className="text-xs text-pretty text-muted-foreground">{badge.description}</span>
-            {earned && badge.awardedAt ? (
+            {compact ? null : <span className="text-xs text-pretty text-muted-foreground">{badge.description}</span>}
+            {compact ? null : earned && badge.awardedAt ? (
               <time dateTime={badge.awardedAt.toISOString()} className="mt-auto text-[11px] text-muted-foreground">
                 {formatDate(badge.awardedAt)}
               </time>

@@ -11,6 +11,10 @@ export const AUDIT_ACTIONS = {
   "enrollment.removed": "Kayıt silindi",
   "curriculum.module_deleted": "Bölüm silindi",
   "curriculum.lesson_deleted": "Ders silindi",
+  "training.deleted": "Canlı eğitim silindi",
+  "badge.awarded": "Rozet verildi",
+  "badge.revoked": "Rozet geri alındı",
+  "team.changed": "Takım güncellendi",
 } as const;
 
 export type AuditAction = keyof typeof AUDIT_ACTIONS;
@@ -26,7 +30,7 @@ export const AUDIT_FILTERS = [
 ] as const;
 export type AuditFilter = (typeof AUDIT_FILTERS)[number]["value"];
 
-export const DELETION_ACTIONS: AuditAction[] = ["enrollment.removed", "curriculum.module_deleted", "curriculum.lesson_deleted"];
+export const DELETION_ACTIONS: AuditAction[] = ["enrollment.removed", "curriculum.module_deleted", "curriculum.lesson_deleted", "training.deleted"];
 
 /** Severity drives the row badge colour. */
 export function auditTone(action: string): "destructive" | "warning" | "success" | "outline" {

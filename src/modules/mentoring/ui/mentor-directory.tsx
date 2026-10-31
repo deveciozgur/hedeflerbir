@@ -49,7 +49,10 @@ function MentorCard({ mentor, onOpen }: { mentor: MentorProfileModel; onOpen: ()
         {mentor.nextAvailable ? (
           <>
             <span className="truncate">
-              İlk müsait <time className="font-mono tabular-nums" dateTime={mentor.nextAvailable.toISOString()}>{formatDateTime(mentor.nextAvailable)}</time>
+              İlk müsait{" "}
+              <time className="font-mono tabular-nums" dateTime={mentor.nextAvailable.toISOString()}>
+                {formatDateTime(mentor.nextAvailable)}
+              </time>
             </span>
             <span className="ml-auto shrink-0 font-mono tabular-nums text-subtle">{mentor.openSlotCount} slot</span>
           </>
@@ -62,7 +65,16 @@ function MentorCard({ mentor, onOpen }: { mentor: MentorProfileModel; onOpen: ()
 }
 
 /** Mentor grid; a card opens its profile and slot picker in a modal, no navigation needed. */
-export function MentorDirectory({ mentors }: { mentors: MentorProfileModel[] }) {
+export function MentorDirectory({
+  mentors,
+  booking,
+  profileHref = (id) => `/mentors/${id}`,
+}: {
+  mentors: MentorProfileModel[];
+  /** Admin: book sessions for teams from the modal. */
+  booking?: { teams: Array<{ id: string; name: string }> };
+  profileHref?: ((id: string) => string) | null;
+}) {
   const [openId, setOpenId] = useState<string | null>(null);
   const active = mentors.find((m) => m.id === openId) ?? null;
 
@@ -79,23 +91,21 @@ export function MentorDirectory({ mentors }: { mentors: MentorProfileModel[] }) 
       <Dialog open={active !== null} onOpenChange={(open) => !open && setOpenId(null)}>
         {active ? (
           <DialogContent className="max-w-2xl gap-8">
-            <PersonHeader
-              person={active}
-              titleAs={(name) => <DialogTitle className="truncate text-lg">{name}</DialogTitle>}
-              className="pr-8"
-            />
-            <DialogDescription className="sr-only">Mentor profili ve müsait randevu saatleri</DialogDescription>
-            <section aria-label="Randevu al" className="flex flex-col gap-4">
+            <PersonHeader person={active} titleAs={(name) => <DialogTitle className="truncate text-lg">{name}</DialogTitle>} className="pr-8" />
+            <DialogDescription className="sr-only">Mentor profili ve müsait saatleri</DialogDescription>
+            <section aria-label={booking ? "Seans planla" : "Müsaitlik"} className="flex flex-col gap-4">
               <div className="flex items-baseline justify-between gap-4">
-                <h3 className="text-sm font-semibold">Randevu al</h3>
-                <Link
-                  href={`/mentors/${active.id}`}
-                  className="inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-popover"
-                >
-                  Profil sayfası <ArrowUpRight className="size-3.5" aria-hidden />
-                </Link>
+                <h3 className="text-sm font-semibold">{booking ? "Seans planla" : "Müsaitlik"}</h3>
+                {profileHref ? (
+                  <Link
+                    href={profileHref(active.id)}
+                    className="inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-popover"
+                  >
+                    Profil sayfası <ArrowUpRight className="size-3.5" aria-hidden />
+                  </Link>
+                ) : null}
               </div>
-              <SlotPicker key={active.id} mentorName={fullName(active)} slots={active.slots} />
+              <SlotPicker key={active.id} mentorName={fullName(active)} slots={active.slots} booking={booking} />
             </section>
           </DialogContent>
         ) : null}

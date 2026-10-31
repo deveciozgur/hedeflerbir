@@ -4,7 +4,7 @@ import type { ExportTable } from "@/modules/administration/domain/export-dataset
 import { formatCell } from "./cell-format";
 import "./pdf-fonts";
 
-const c = { text: "#18181b", muted: "#71717a", border: "#e4e4e7", header: "#f4f4f5", brand: "#4f46e5" };
+const c = { text: "#18181b", muted: "#71717a", border: "#e4e4e7", header: "#f4f4f5", brand: "#008374" };
 
 const styles = StyleSheet.create({
   page: { fontFamily: "Geist", fontSize: 8, color: c.text, paddingTop: 36, paddingBottom: 44, paddingHorizontal: 32 },

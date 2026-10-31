@@ -36,15 +36,20 @@ export async function getMentorSchedule(mentorId: string): Promise<MentorSlotRow
   });
 }
 
-export interface StudentBrief {
+export interface TeamMemberBrief {
   id: string;
   name: string;
   surname: string;
-  email: string;
   avatarUrl: string | null;
-  goals: string | null;
-  projects: Array<{ title: string; completionPercentage: number }>;
-  submissions: { submitted: number; graded: number; averagePercentage: number | null };
+  department: string | null;
+}
+
+/** The requesting team as the mentor sees it before a session (or the contact alone for a legacy 1:1 booking). */
+export interface TeamBrief {
+  name: string | null;
+  focusArea: string | null;
+  contactEmail: string;
+  members: TeamMemberBrief[];
 }
 
 export interface MentorAppointmentRow {
@@ -52,69 +57,57 @@ export interface MentorAppointmentRow {
   status: AppointmentStatus;
   startTime: Date;
   endTime: Date;
-  meetingLink: string | null;
   notes: string | null;
-  student: StudentBrief;
+  mentorName: string;
+  team: TeamBrief;
 }
 
 export type AppointmentPhase = "upcoming" | "past";
 
-/** Appointments with a pre-session student brief: goals, project progress and assignment performance. */
-export async function getMentorAppointments(mentorId: string, phase: AppointmentPhase): Promise<MentorAppointmentRow[]> {
+const memberSelect = { id: true, name: true, surname: true, avatarUrl: true, profile: { select: { department: true } } } as const;
+
+/** Appointments with the requesting team's brief: members, departments and focus area. */
+export const getMentorAppointments = (mentorId: string, phase: AppointmentPhase) => listAppointments(phase, mentorId);
+
+/** All mentors' sessions (admin) or one mentor's. */
+export async function listAppointments(phase: AppointmentPhase, mentorId?: string): Promise<MentorAppointmentRow[]> {
   const now = new Date();
+  const byMentor = mentorId ? { mentorId } : {};
   const rows = await db.appointment.findMany({
     where:
       phase === "upcoming"
-        ? { mentorId, status: "CONFIRMED", slot: { endTime: { gt: now } } }
-        : { mentorId, OR: [{ status: { not: "CONFIRMED" } }, { slot: { endTime: { lte: now } } }] },
+        ? { ...byMentor, status: "CONFIRMED", slot: { endTime: { gt: now } } }
+        : { ...byMentor, OR: [{ status: { not: "CONFIRMED" } }, { slot: { endTime: { lte: now } } }] },
     orderBy: { slot: { startTime: phase === "upcoming" ? "asc" : "desc" } },
     take: phase === "past" ? 50 : undefined,
     select: {
       id: true,
       status: true,
-      meetingLink: true,
       notes: true,
       slot: { select: { startTime: true, endTime: true } },
-      student: {
-        select: {
-          id: true,
-          name: true,
-          surname: true,
-          email: true,
-          avatarUrl: true,
-          profile: { select: { goals: true } },
-          projectProgress: {
-            orderBy: { project: { endDate: "asc" } },
-            select: { completionPercentage: true, project: { select: { title: true } } },
-          },
-          submissions: { select: { status: true, grade: true, assignment: { select: { maxScore: true } } } },
-        },
-      },
+      mentor: { select: { name: true, surname: true } },
+      student: { select: { email: true, ...memberSelect } },
+      team: { select: { name: true, focusArea: true, members: { where: { isActive: true }, orderBy: { name: "asc" }, select: memberSelect } } },
     },
   });
 
-  return rows.map(({ slot, student, ...appointment }) => {
-    const graded = student.submissions.filter((s) => s.status === "GRADED" && s.grade !== null);
-    const averagePercentage = graded.length
-      ? Math.round(graded.reduce((sum, s) => sum + ((s.grade ?? 0) / s.assignment.maxScore) * 100, 0) / graded.length)
-      : null;
-
-    return {
-      ...appointment,
-      startTime: slot.startTime,
-      endTime: slot.endTime,
-      student: {
-        id: student.id,
-        name: student.name,
-        surname: student.surname,
-        email: student.email,
-        avatarUrl: student.avatarUrl,
-        goals: student.profile?.goals ?? null,
-        projects: student.projectProgress.map((p) => ({ title: p.project.title, completionPercentage: p.completionPercentage })),
-        submissions: { submitted: student.submissions.length, graded: graded.length, averagePercentage },
-      },
-    };
+  const toMember = ({ profile, ...m }: { id: string; name: string; surname: string; avatarUrl: string | null; profile: { department: string | null } | null }) => ({
+    ...m,
+    department: profile?.department ?? null,
   });
+
+  return rows.map(({ slot, student, team, mentor, ...appointment }) => ({
+    ...appointment,
+    mentorName: `${mentor.name} ${mentor.surname}`,
+    startTime: slot.startTime,
+    endTime: slot.endTime,
+    team: {
+      name: team?.name ?? null,
+      focusArea: team?.focusArea ?? null,
+      contactEmail: student.email,
+      members: team ? team.members.map(toMember) : [toMember(student)],
+    },
+  }));
 }
 
 export interface MentorOverview {

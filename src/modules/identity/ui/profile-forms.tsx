@@ -77,7 +77,7 @@ export function StudentProfileForm({ defaults }: { defaults: StudentProfileInput
   );
 
   return (
-    <ProfileCard title="Kişisel bilgiler" description="Hedeflerin, mentorlarınla seans öncesinde paylaşılır.">
+    <ProfileCard title="Kişisel bilgiler" description="Bölümün ve Hakkımda yazın kişi kartında görünür; hedeflerin mentorlarınla paylaşılır.">
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField id="name" label="Ad" error={errors.name?.message}>
@@ -85,6 +85,14 @@ export function StudentProfileForm({ defaults }: { defaults: StudentProfileInput
           </FormField>
           <FormField id="surname" label="Soyad" error={errors.surname?.message}>
             <Input id="surname" autoComplete="family-name" {...describe("surname", errors.surname)} {...register("surname")} />
+          </FormField>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField id="department" label="Okuduğun bölüm" error={errors.department?.message}>
+            <Input id="department" placeholder="Örn. Bilgisayar Mühendisliği" {...describe("department", errors.department)} {...register("department")} />
+          </FormField>
+          <FormField id="city" label="Şehir" error={errors.city?.message}>
+            <Input id="city" autoComplete="address-level2" {...describe("city", errors.city)} {...register("city")} />
           </FormField>
         </div>
         <FormField id="goals" label="Hedeflerim" error={errors.goals?.message} hint="Örn. ilk oyunumu yayınlamak, junior pozisyon bulmak.">
@@ -139,16 +147,6 @@ export function ExpertProfileForm({ defaults, isMentor }: { defaults: ExpertProf
         <FormField id="bio" label="Biyografi" error={errors.bio?.message}>
           <Textarea id="bio" rows={5} {...describe("bio", errors.bio)} {...register("bio")} />
         </FormField>
-        {isMentor ? (
-          <FormField
-            id="meetingUrl"
-            label="Görüşme odası bağlantısı"
-            hint="Her yeni randevuya otomatik eklenir (Google Meet, Zoom…)."
-            error={errors.meetingUrl?.message}
-          >
-            <Input id="meetingUrl" type="url" placeholder="https://meet.google.com/…" {...describe("meetingUrl", errors.meetingUrl, true)} {...register("meetingUrl")} />
-          </FormField>
-        ) : null}
         <fieldset className="flex flex-col gap-3">
           <legend className="mb-1 text-sm font-medium">Sosyal bağlantılar</legend>
           <div className="grid gap-3 sm:grid-cols-2">

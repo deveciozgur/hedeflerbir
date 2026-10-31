@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useId, useOptimistic, useState, useTransition } from "react";
 import { Download, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,8 @@ export function SubmissionPanel({ assignmentId, submission, eligibility, accepte
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState("");
   const [replacing, setReplacing] = useState(false);
+  // Several panels can share a page (one per assignment of a training).
+  const noteId = useId();
 
   const hasActiveSubmission = optimisticStatus === "SUBMITTED";
   const showForm = eligibility.allowed && (!hasActiveSubmission || replacing);
@@ -92,9 +94,9 @@ export function SubmissionPanel({ assignmentId, submission, eligibility, accepte
           >
             <FileDropzone file={file} onFileChange={setFile} disabled={pending} acceptedFileTypes={acceptedFileTypes} />
             <div className="flex flex-col gap-2">
-              <Label htmlFor="submission-note">Eğitmene not (isteğe bağlı)</Label>
+              <Label htmlFor={noteId}>Eğitmene not (isteğe bağlı)</Label>
               <Textarea
-                id="submission-note"
+                id={noteId}
                 value={note}
                 maxLength={2000}
                 onChange={(event) => setNote(event.target.value)}

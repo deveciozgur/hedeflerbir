@@ -7,12 +7,15 @@ import { boardColumnOf, type BoardColumn, type SubmissionStatus } from "../domai
 export interface StudentAssignmentCard {
   id: string;
   title: string;
+  /** The live training the assignment belongs to, or the programme title for standalone ones. */
   courseTitle: string;
   dueDate: Date;
   maxScore: number;
   status: SubmissionStatus | null;
   grade: number | null;
   column: BoardColumn;
+  /** Training assignments are submitted on the training page; the to-do list only links there. */
+  href: string;
 }
 
 const enrolledBy = (studentId: string) => ({ course: { enrollments: { some: { studentId } } } });
@@ -27,15 +30,17 @@ export async function getStudentAssignments(studentId: string): Promise<StudentA
       dueDate: true,
       maxScore: true,
       course: { select: { title: true } },
+      session: { select: { id: true, title: true } },
       submissions: { where: { studentId }, select: { status: true, grade: true }, take: 1 },
     },
   });
 
-  return rows.map(({ submissions, course, ...assignment }) => {
+  return rows.map(({ submissions, course, session, ...assignment }) => {
     const submission = submissions[0] ?? null;
     return {
       ...assignment,
-      courseTitle: course.title,
+      courseTitle: session?.title ?? course.title,
+      href: session ? `/trainings/${session.id}` : `/assignments/${assignment.id}`,
       status: submission?.status ?? null,
       grade: submission?.grade ?? null,
       column: boardColumnOf(submission?.status ?? null),
@@ -45,6 +50,7 @@ export async function getStudentAssignments(studentId: string): Promise<StudentA
 
 export interface StudentAssignmentDetail {
   id: string;
+  sessionId: string | null;
   title: string;
   description: string;
   dueDate: Date;
@@ -71,6 +77,7 @@ export async function getStudentAssignmentDetail(studentId: string, assignmentId
     where: { id: assignmentId, ...enrolledBy(studentId) },
     select: {
       id: true,
+      sessionId: true,
       title: true,
       description: true,
       dueDate: true,

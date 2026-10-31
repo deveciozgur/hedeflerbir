@@ -21,7 +21,7 @@ const KIND_ICONS: Record<AgendaKind, LucideIcon> = {
   appointment: CalendarClock,
 };
 
-/** One color per meaning: indigo = live now, amber = deadline pressure, emerald = confirmed. */
+/** One color per meaning: brand teal = live now, amber = deadline pressure, emerald = confirmed. */
 const STATUS_BADGE: Record<AgendaStatus, BadgeProps["variant"]> = {
   live: "brand",
   scheduled: "outline",

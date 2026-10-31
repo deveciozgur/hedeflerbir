@@ -40,12 +40,15 @@
   --input: oklch(0.871 0.006 286.286);
   --ring: oklch(0.552 0.016 285.938);                  /* zinc-500 focus ring, >3:1 on white */
 
-  /* Accent: indigo. Fills 500/600; text on tinted chips uses 700 for contrast. */
-  --brand: oklch(0.585 0.233 277.117);                 /* #6366F1 */
-  --brand-soft: oklch(0.457 0.24 277.023);             /* indigo-700 ~8:1 */
+  /* HedeflerBir brand: primary teal #008374; magenta / cyan / amber are the logo accents. */
+  --brand: #008374;                                    /* white text 4.7:1 */
+  --brand-soft: #006a5e;                               /* teal text on tinted chips ~6.4:1 */
   --brand-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.511 0.262 276.966);               /* indigo-600, white text ~6.3:1 */
+  --primary: #008374;
   --primary-foreground: oklch(0.985 0 0);
+  --magenta: #b41c83;                                  /* white text 6.3:1 */
+  --cyan: #01bbbe;                                     /* decorative fills only (2.4:1 on white) */
+  --amber: #ffa200;                                    /* decorative fills only; dark text on it */
 
   /* Status (reserved for state, never decoration) */
   --success: oklch(0.508 0.118 165.612);               /* emerald-700 ~5.5:1 */
@@ -92,11 +95,14 @@
   --input: oklch(0.274 0.006 286.033);
   --ring: oklch(0.705 0.015 286.067);                  /* zinc-400 */
 
-  --brand: oklch(0.585 0.233 277.117);
-  --brand-soft: oklch(0.785 0.115 274.713);            /* indigo-300 ~9:1 */
+  --brand: #00a090;                                    /* lifted teal for dark surfaces */
+  --brand-soft: #5fd4c4;                               /* teal text on dark ~9:1 */
   --brand-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.511 0.262 276.966);
+  --primary: #008374;
   --primary-foreground: oklch(0.985 0 0);
+  --magenta: #d9479f;
+  --cyan: #01bbbe;
+  --amber: #ffa200;
 
   --success: oklch(0.765 0.177 163.223);               /* emerald-400 */
   --warning: oklch(0.828 0.189 84.429);                /* amber-400 */
@@ -135,6 +141,9 @@
   --color-brand: var(--brand);
   --color-brand-soft: var(--brand-soft);
   --color-brand-foreground: var(--brand-foreground);
+  --color-magenta: var(--magenta);
+  --color-cyan: var(--cyan);
+  --color-amber: var(--amber);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-input: var(--input);

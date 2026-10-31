@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { demoCredentialsFor } from "@/modules/identity/application/demo-login";
 import { LoginForm } from "@/modules/identity/ui/login-form";
+import { KvkkNotice } from "@/modules/identity/ui/kvkk-notice";
 import { ForgotPasswordLink, ResetSuccessNotice } from "@/modules/identity/ui/login-notices";
 
 export const metadata: Metadata = { title: "Giriş" };
@@ -19,6 +20,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <div className="flex flex-col gap-3">
         <LoginForm portal="student" callbackUrl={callbackUrl} demoAccounts={demoCredentialsFor("student")} />
         <ForgotPasswordLink />
+        <KvkkNotice />
       </div>
       <p className="text-sm text-muted-foreground">
         Eğitmen veya mentor musun?{" "}

@@ -32,7 +32,7 @@ export default async function MentorDetailPage({ params }: { params: Promise<{ m
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Randevu al</CardTitle>
+              <CardTitle>Müsaitlik</CardTitle>
               <CardDescription>Önümüzdeki {BOOKING_HORIZON_DAYS} gün, Türkiye saatiyle.</CardDescription>
             </div>
           </CardHeader>

@@ -12,7 +12,7 @@ export function AssignmentList({ items }: { items: StudentAssignmentCard[] }) {
         {items.map((item) => (
           <li key={item.id}>
             <Link
-              href={`/assignments/${item.id}`}
+              href={item.href}
               className="group flex items-center gap-4 px-6 py-4 transition-colors duration-150 outline-none hover:bg-accent/70 focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
             >
               <div className="flex min-w-0 flex-1 flex-col gap-1">

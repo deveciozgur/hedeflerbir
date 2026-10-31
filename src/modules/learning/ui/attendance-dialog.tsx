@@ -17,17 +17,19 @@ import {
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn, fullName } from "@/lib/utils";
 import { saveAttendanceAction } from "../application/learning.actions";
-import type { InstructorSession, RosterStudent } from "../application/instructor-courses.queries";
 import { ATTENDANCE_LABELS, type AttendanceStatus } from "../domain/attendance";
+
+type RollSession = { id: string; title: string; attendance: Array<{ studentId: string; status: AttendanceStatus }> };
+type RollStudent = { id: string; name: string; surname: string; avatarUrl: string | null };
 
 const STATUSES: AttendanceStatus[] = ["PRESENT", "ABSENT", "EXCUSED"];
 
-const initialRecords = (session: InstructorSession, roster: RosterStudent[]) => {
+const initialRecords = (session: RollSession, roster: RollStudent[]) => {
   const existing = new Map(session.attendance.map((a) => [a.studentId, a.status]));
   return Object.fromEntries(roster.map((s) => [s.id, existing.get(s.id) ?? "PRESENT"])) as Record<string, AttendanceStatus>;
 };
 
-export function AttendanceDialog({ session, roster }: { session: InstructorSession; roster: RosterStudent[] }) {
+export function AttendanceDialog({ session, roster }: { session: RollSession; roster: RollStudent[] }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [records, setRecords] = useState(() => initialRecords(session, roster));

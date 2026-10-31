@@ -71,6 +71,7 @@ export async function submitAssignmentAction(formData: FormData): Promise<Action
   await completeAssignmentLesson(student.id, assignment.id);
   revalidatePath("/assignments", "layout");
   revalidatePath("/courses", "layout");
+  revalidatePath("/trainings", "layout");
   revalidatePath("/dashboard");
   return ok({ status: "SUBMITTED" });
 }

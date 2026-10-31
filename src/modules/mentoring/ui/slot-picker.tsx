@@ -1,36 +1,41 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CalendarCheck2, CalendarX2, Check, Loader2, MessageSquarePlus } from "lucide-react";
+import { CalendarCheck2, CalendarX2, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { dayKey, formatDayNumber, formatLongDay, formatTimeRange, formatWeekday } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { bookSlotAction } from "../application/mentoring.actions";
+import { bookForTeamAction } from "../application/mentoring.actions";
 import type { BookableSlot } from "../application/mentor-directory.queries";
 import { groupByDay } from "../domain/availability";
 
 interface SlotPickerProps {
   mentorName: string;
   slots: BookableSlot[];
+  /** Admin only: book the selected slot for one of these teams. Without it the picker just shows availability. */
+  booking?: { teams: Array<{ id: string; name: string }> };
 }
 
 const choiceClass =
   "outline-none transition-[background-color,border-color,color,transform] duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-popover";
 
 /**
- * Day pills (horizontal, scroll-snapped) → that day's time buttons → one confirm.
- * Booked slots stay visible but inert so the student sees how the day fills up.
+ * Day pills (horizontal, scroll-snapped) → that day's times. Participants see availability only;
+ * the admin selects a time and books it for a team. Booked slots stay visible but inert.
  */
-export function SlotPicker({ mentorName, slots }: SlotPickerProps) {
+export function SlotPicker({ mentorName, slots, booking }: SlotPickerProps) {
   const [pending, startTransition] = useTransition();
   const [bookedNow, setBookedNow] = useState<ReadonlySet<string>>(new Set());
-  const [confirmed, setConfirmed] = useState<BookableSlot | null>(null);
+  const [confirmed, setConfirmed] = useState<{ slot: BookableSlot; team: string } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [notesOpen, setNotesOpen] = useState(false);
+  const [teamId, setTeamId] = useState(booking?.teams[0]?.id ?? "");
+  const [meetingLink, setMeetingLink] = useState("");
   const [notes, setNotes] = useState("");
 
   const view = useMemo(() => slots.map((s) => ({ ...s, isBooked: s.isBooked || bookedNow.has(s.id) })), [slots, bookedNow]);
@@ -47,50 +52,44 @@ export function SlotPicker({ mentorName, slots }: SlotPickerProps) {
           <Check className="size-5" />
         </span>
         <div className="flex flex-col gap-1">
-          <p className="text-sm font-semibold">Randevun onaylandı</p>
+          <p className="text-sm font-semibold">Seans planlandı</p>
           <p className="text-sm text-muted-foreground">
-            {mentorName}, {formatLongDay(confirmed.startTime)} {formatTimeRange(confirmed.startTime, confirmed.endTime)}
+            {confirmed.team} · {mentorName}, {formatLongDay(confirmed.slot.startTime)} {formatTimeRange(confirmed.slot.startTime, confirmed.slot.endTime)}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setConfirmed(null)}>
-          Başka bir saat seç
+          Başka bir seans planla
         </Button>
       </div>
     );
   }
 
   if (!activeDay) {
-    return (
-      <EmptyState icon={CalendarX2} title="Müsait saat yok" description="Mentor yeni saatler eklediğinde buradan randevu oluşturabilirsin." />
-    );
+    return <EmptyState icon={CalendarX2} title="Müsait saat yok" description="Mentor yeni saatler eklediğinde burada görünecek." />;
   }
 
   const confirm = () => {
-    if (!selected) return;
+    if (!selected || !booking) return;
     const slot = selected;
+    const team = booking.teams.find((t) => t.id === teamId);
     startTransition(async () => {
-      const result = await bookSlotAction({ slotId: slot.id, notes });
-      // Either way the slot is gone: booked by us, or taken by someone else meanwhile.
+      const result = await bookForTeamAction({ slotId: slot.id, teamId, notes, meetingLink });
       setBookedNow((prev) => new Set(prev).add(slot.id));
       setSelectedId(null);
       if (!result.ok) {
-        toast.error("Randevu oluşturulamadı", { description: result.error });
+        toast.error("Seans planlanamadı", { description: result.error });
         return;
       }
       setNotes("");
-      setNotesOpen(false);
-      setConfirmed(slot);
-      toast.success("Seansın onaylandı", { description: "E-posta ile de bilgilendirildin." });
+      setMeetingLink("");
+      setConfirmed({ slot, team: team?.name ?? "" });
+      toast.success("Seans planlandı", { description: "Mentor ve takım üyeleri bilgilendirildi." });
     });
   };
 
   return (
     <div className="flex flex-col gap-6">
-      <div
-        role="group"
-        aria-label="Gün seçin"
-        className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pt-1 pb-2 [scrollbar-width:thin]"
-      >
+      <div role="group" aria-label="Gün seçin" className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pt-1 pb-2 [scrollbar-width:thin]">
         {days.map((day) => {
           const active = day.key === activeDay.key;
           const open = day.items.filter((s) => !s.isBooked).length;
@@ -129,6 +128,20 @@ export function SlotPicker({ mentorName, slots }: SlotPickerProps) {
           {activeDay.items.map((slot) => {
             const isSelected = slot.id === selectedId;
             const range = formatTimeRange(slot.startTime, slot.endTime);
+            if (!booking) {
+              return (
+                <span
+                  key={slot.id}
+                  className={cn(
+                    "grid h-10 place-items-center rounded-md border font-mono text-sm tabular-nums",
+                    slot.isBooked ? "border-border text-subtle line-through opacity-50" : "border-brand/30 bg-brand/5",
+                  )}
+                >
+                  <span className="sr-only">{slot.isBooked ? "Dolu: " : "Müsait: "}</span>
+                  {range}
+                </span>
+              );
+            }
             return (
               <button
                 key={slot.id}
@@ -150,44 +163,50 @@ export function SlotPicker({ mentorName, slots }: SlotPickerProps) {
             );
           })}
         </div>
+        {!booking ? <p className="text-xs text-muted-foreground">Mentorluk seansları program yönetimi tarafından takımına planlanır.</p> : null}
       </div>
 
-      <div className="flex flex-col gap-4 border-t border-border pt-6">
-        {notesOpen ? (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="booking-notes">Görüşmek istediğin konular</Label>
-            <Textarea
-              id="booking-notes"
-              rows={3}
-              value={notes}
-              maxLength={1000}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Örn. portfolyo incelemesi, kariyer planı"
-              disabled={pending}
-            />
+      {booking ? (
+        <div className="flex flex-col gap-4 border-t border-border pt-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="booking-team">Takım</Label>
+              <NativeSelect id="booking-team" value={teamId} onChange={(e) => setTeamId(e.target.value)} disabled={pending}>
+                {booking.teams.length === 0 ? <option value="">Önce takım oluşturun</option> : null}
+                {booking.teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="booking-link">Görüşme bağlantısı (isteğe bağlı)</Label>
+              <Input id="booking-link" type="url" placeholder="https://" value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} disabled={pending} />
+            </div>
           </div>
-        ) : (
-          <Button variant="ghost" size="sm" className="self-start" onClick={() => setNotesOpen(true)}>
-            <MessageSquarePlus aria-hidden /> Not ekle
-          </Button>
-        )}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground" aria-live="polite">
-            {selected ? (
-              <>
-                <span className="text-foreground">{formatLongDay(selected.startTime)}</span>{" "}
-                <span className="font-mono tabular-nums">{formatTimeRange(selected.startTime, selected.endTime)}</span>
-              </>
-            ) : (
-              "Bir saat seç"
-            )}
-          </p>
-          <Button onClick={confirm} disabled={!selected || pending} className="sm:w-auto">
-            {pending ? <Loader2 className="animate-spin" aria-hidden /> : <CalendarCheck2 aria-hidden />}
-            Randevuyu onayla
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="booking-notes">Talep notu</Label>
+            <Textarea id="booking-notes" rows={2} value={notes} maxLength={1000} onChange={(e) => setNotes(e.target.value)} placeholder="Takımın görüşmek istediği konular" disabled={pending} />
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              {selected ? (
+                <>
+                  <span className="text-foreground">{formatLongDay(selected.startTime)}</span>{" "}
+                  <span className="font-mono tabular-nums">{formatTimeRange(selected.startTime, selected.endTime)}</span>
+                </>
+              ) : (
+                "Bir saat seç"
+              )}
+            </p>
+            <Button onClick={confirm} disabled={!selected || !teamId || pending}>
+              {pending ? <Loader2 className="animate-spin" aria-hidden /> : <CalendarCheck2 aria-hidden />}
+              Seansı planla
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

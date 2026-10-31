@@ -104,9 +104,11 @@ export interface StudentAppointment {
   mentor: { id: string; name: string; surname: string; avatarUrl: string | null };
 }
 
+/** The student's upcoming sessions, including those the admin booked for their team. */
 export async function getStudentUpcomingAppointments(studentId: string): Promise<StudentAppointment[]> {
+  const me = await db.user.findUnique({ where: { id: studentId }, select: { teamId: true } });
   const rows = await db.appointment.findMany({
-    where: { studentId, status: "CONFIRMED", slot: { endTime: { gt: new Date() } } },
+    where: { status: "CONFIRMED", slot: { endTime: { gt: new Date() } }, OR: [{ studentId }, ...(me?.teamId ? [{ teamId: me.teamId }] : [])] },
     orderBy: { slot: { startTime: "asc" } },
     select: {
       id: true,

@@ -38,7 +38,6 @@ export async function ExpertProfileScreen({ viewer }: { viewer: Viewer }) {
               bio: profile.bio,
               title: profile.title,
               expertiseArea: profile.expertiseArea,
-              meetingUrl: profile.meetingUrl,
               socialLinks: profile.socialLinks,
             }}
           />

@@ -6,7 +6,7 @@ import { formatFullDate } from "@/lib/format";
 import type { CertificateRecord } from "@/modules/learning/application/certificate.queries";
 import "./pdf-fonts";
 
-const c = { text: "#18181b", muted: "#71717a", border: "#e4e4e7", brand: "#4f46e5" };
+const c = { text: "#18181b", muted: "#71717a", border: "#e4e4e7", brand: "#008374" };
 // Passed as bytes: react-pdf does not resolve local file paths reliably on every platform.
 const LOGO = { data: readFileSync(join(process.cwd(), "public", "logo.png")), format: "png" as const };
 

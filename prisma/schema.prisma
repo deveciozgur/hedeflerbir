@@ -115,11 +115,14 @@ model User {
   isActive       Boolean  @default(true)
   /// Embedded in the JWT at sign-in; bumping it revokes every existing session (e.g. after a password reset).
   sessionVersion Int      @default(0)
+  teamId         String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   profile             Profile?
   passwordResetTokens PasswordResetToken[]
+  team                Team?                @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  taughtSessions      CourseSession[]      @relation("SessionInstructor")
 
   taughtCourses         Course[]                 @relation("CourseInstructor")
   enrollments           Enrollment[]
@@ -145,6 +148,7 @@ model User {
   auditLogs             AuditLog[]
 
   @@index([role])
+  @@index([teamId])
 }
 
 /// Single-use password reset token. Only the SHA-256 hash is stored — a DB leak can't be replayed.
@@ -173,8 +177,22 @@ model Profile {
   goals         String? @db.Text
   /// Mentor's default video-call room, attached to every booked appointment
   meetingUrl    String?
+  /// Okuduğu bölüm (participants); shown on person cards and in demographic reports.
+  department    String?
+  city          String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Participant team: mentoring sessions are booked per team and teammates see each other ("Ekibim").
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  focusArea String?
+  createdAt DateTime @default(now())
+
+  members      User[]
+  appointments Appointment[]
 }
 
 // ─────────────────────────── Learning ────────────────────────────
@@ -216,15 +234,24 @@ model CourseSession {
   recordingUrl    String?
   /// Array<{ title: string; url: string; type: "pdf" | "link" | "file" }>
   resources       Json     @default("[]")
+  /// Live training: who teaches this session (null = the course instructor).
+  instructorId    String?
+  /// Topic/content headings, one per line.
+  topics          String?  @db.Text
+  /// Badge code (engagement/domain/badges.ts) granted to students marked PRESENT.
+  badgeCode       String?
   createdAt       DateTime @default(now())
 
   course      Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  instructor  User?               @relation("SessionInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
   attendances SessionAttendance[]
   lessonViews LessonView[]
   lesson      Lesson?
+  assignments Assignment[]
 
   @@unique([courseId, order])
   @@index([scheduleDate])
+  @@index([instructorId])
 }
 
 model Enrollment {
@@ -454,13 +481,17 @@ model Assignment {
   maxScore          Int      @default(100)
   /// Allowed file extensions, e.g. ["pdf", "zip"]. Empty = the platform default list.
   acceptedFileTypes String[] @default([])
+  /// Live training this assignment belongs to; students submit from that training's page.
+  sessionId         String?
   createdAt         DateTime @default(now())
 
-  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course      Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  session     CourseSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   submissions Submission[]
   lesson      Lesson?
 
   @@index([courseId, dueDate])
+  @@index([sessionId])
 }
 
 model Submission {
@@ -550,16 +581,20 @@ model Appointment {
   status      AppointmentStatus @default(CONFIRMED)
   meetingLink String?
   notes       String?           @db.Text
+  /// Team the session is for (admin books on the team's behalf; studentId is the team contact).
+  teamId      String?
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
   slot    MentorSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  team    Team?      @relation(fields: [teamId], references: [id], onDelete: SetNull)
   student User       @relation("AppointmentStudent", fields: [studentId], references: [id], onDelete: Cascade)
   mentor  User       @relation("AppointmentMentor", fields: [mentorId], references: [id], onDelete: Cascade)
 
   @@index([slotId])
   @@index([studentId, status])
   @@index([mentorId, status])
+  @@index([teamId])
 }
 
 // ─────────────────────────── Messaging ───────────────────────────

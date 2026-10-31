@@ -42,7 +42,7 @@ export default async function AssignmentsPage({ searchParams }: PageProps) {
 
   return (
     <div className="flex flex-col gap-8">
-      <PageHeader title="Ödevler" description="Bekleyen, teslim edilen ve değerlendirilen ödevlerin." />
+      <PageHeader title="Ödevler" description="Yapılacaklar listen: hangi eğitimden hangi ödevin beklediği, son tarihi ve durumu. Dosyanı eğitimin sayfasından teslim edersin." />
 
       {items.length === 0 ? (
         <EmptyState

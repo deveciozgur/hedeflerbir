@@ -1,11 +1,10 @@
 "use client";
 
-import { CheckCircle2, Mail, Target, Video } from "lucide-react";
+import { CheckCircle2, Mail, Target, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AddToCalendar } from "@/components/ui/add-to-calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { formatDateTime, formatRelative, formatTime } from "@/lib/format";
 import type { ActionResult } from "@/lib/action-result";
@@ -18,19 +17,22 @@ import { ConfirmActionButton } from "@/components/ui/confirm-action-button";
 
 const STATUS_VARIANT = { CONFIRMED: "brand", COMPLETED: "success", CANCELLED: "outline" } as const;
 
-/** Appointment with the pre-session student brief (goals, projects, assignment performance). */
-export function MentorAppointmentCard({ appointment: a }: { appointment: MentorAppointmentRow }) {
-  const { student } = a;
-  const cancellable = canCancel(a).allowed;
-  const completable = canComplete(a).allowed;
+/** Session card with the requesting team's brief (members, departments, focus area). Sessions run on external links. */
+export function MentorAppointmentCard({ appointment: a, showActions = true }: { appointment: MentorAppointmentRow; showActions?: boolean }) {
+  const { team } = a;
+  const title = team.name ?? fullName(team.members[0] ?? { name: "Katılımcı", surname: "" });
+  const cancellable = showActions && canCancel(a).allowed;
+  const completable = showActions && canComplete(a).allowed;
 
   return (
     <Card>
       <CardHeader className="flex-col sm:flex-row">
         <div className="flex min-w-0 items-center gap-3">
-          <UserAvatar user={student} className="size-10" />
+          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand-soft" aria-hidden>
+            <Users className="size-5" />
+          </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{fullName(student)}</p>
+            <p className="truncate text-sm font-semibold">{title}</p>
             <p className="text-xs tabular-nums text-muted-foreground">
               <time dateTime={a.startTime.toISOString()}>
                 {formatDateTime(a.startTime)} - {formatTime(a.endTime)}
@@ -46,64 +48,47 @@ export function MentorAppointmentCard({ appointment: a }: { appointment: MentorA
         <div className="grid gap-5 md:grid-cols-2">
           <div className="flex flex-col gap-2">
             <h3 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <Target className="size-3.5" aria-hidden /> Hedefleri
+              <Target className="size-3.5" aria-hidden /> Çalışma alanı
             </h3>
-            <p className="text-sm text-pretty">{student.goals ?? "Katılımcı henüz hedef eklemedi."}</p>
+            <p className="text-sm text-pretty">{team.focusArea ?? "Takım çalışma alanını henüz belirtmedi."}</p>
             {a.notes ? (
               <div className="mt-2 rounded-lg bg-muted/60 p-3">
-                <p className="mb-1 text-xs font-medium text-muted-foreground">Seans için notu</p>
+                <p className="mb-1 text-xs font-medium text-muted-foreground">Talep notu</p>
                 <p className="text-sm whitespace-pre-wrap">{a.notes}</p>
               </div>
             ) : null}
           </div>
 
           <div className="flex flex-col gap-3">
-            <h3 className="text-xs font-medium text-muted-foreground">İlerleme</h3>
-            {student.projects.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Dahil olduğu proje yok.</p>
-            ) : (
-              student.projects.map((project) => (
-                <div key={project.title} className="flex flex-col gap-1.5">
-                  <div className="flex justify-between gap-2 text-xs">
-                    <span className="truncate">{project.title}</span>
-                    <span className="tabular-nums text-muted-foreground">%{project.completionPercentage}</span>
-                  </div>
-                  <Progress value={project.completionPercentage} aria-label={`${project.title} ilerlemesi`} />
-                </div>
-              ))
-            )}
-            <p className="text-xs text-muted-foreground">
-              {student.submissions.submitted} ödev teslimi · {student.submissions.graded} değerlendirildi
-              {student.submissions.averagePercentage !== null ? ` · ort. %${student.submissions.averagePercentage}` : null}
-            </p>
+            <h3 className="text-xs font-medium text-muted-foreground">Katılımcılar ({team.members.length})</h3>
+            <ul className="flex flex-col gap-2">
+              {team.members.map((member) => (
+                <li key={member.id} className="flex items-center gap-2.5">
+                  <UserAvatar user={member} className="size-7" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm">{fullName(member)}</span>
+                    {member.department ? <span className="block truncate text-xs text-muted-foreground">{member.department}</span> : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2 border-t pt-4">
-          {a.status === "CONFIRMED" && a.meetingLink ? (
-            <Button asChild size="sm" variant="brand">
-              <a href={a.meetingLink} target="_blank" rel="noopener noreferrer">
-                <Video aria-hidden /> Görüşmeye katıl
-              </a>
-            </Button>
-          ) : null}
           {a.status === "CONFIRMED" && a.startTime > new Date() ? (
             <AddToCalendar
-              event={appointmentCalendarEvent({ id: a.id, startTime: a.startTime, endTime: a.endTime, meetingLink: a.meetingLink, withName: fullName(student) })}
+              event={appointmentCalendarEvent({ id: a.id, startTime: a.startTime, endTime: a.endTime, meetingLink: null, withName: title })}
               icsHref={appointmentIcsHref(a.id)}
             />
           ) : null}
           <Button asChild size="sm" variant="outline">
-            <a href={`mailto:${student.email}`}>
-              <Mail aria-hidden /> E-posta
+            <a href={`mailto:${team.contactEmail}`}>
+              <Mail aria-hidden /> İletişim
             </a>
           </Button>
-          {completable ? (
-            <AppointmentActionButton kind="complete" name={fullName(student)} action={() => completeAppointmentAction(a.id)} />
-          ) : null}
-          {cancellable ? (
-            <AppointmentActionButton kind="cancel" name={fullName(student)} action={() => cancelAppointmentAction(a.id)} />
-          ) : null}
+          {completable ? <AppointmentActionButton kind="complete" name={title} action={() => completeAppointmentAction(a.id)} /> : null}
+          {cancellable ? <AppointmentActionButton kind="cancel" name={title} action={() => cancelAppointmentAction(a.id)} /> : null}
         </div>
       </CardContent>
     </Card>

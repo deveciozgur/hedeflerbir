@@ -36,7 +36,8 @@ export function CourseFormDialog({ instructors, course, trigger }: CourseFormDia
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [slugTouched, setSlugTouched] = useState(Boolean(course));
+  // Editing keeps the existing slug (links stay valid); new programmes derive it from the title.
+  const slugTouched = Boolean(course);
   const defaults: CourseInput = course ?? { title: "", slug: "", description: "", instructorId: instructors[0]?.id ?? "" };
   const {
     register,
@@ -57,7 +58,7 @@ export function CourseFormDialog({ instructors, course, trigger }: CourseFormDia
         toast.error(result.error);
         return;
       }
-      toast.success(course ? "Eğitim güncellendi" : "Eğitim oluşturuldu");
+      toast.success(course ? "Program güncellendi" : "Program oluşturuldu");
       setOpen(false);
       if (result.data && "id" in result.data) router.push(`/admin/courses/${result.data.id}`);
     }),
@@ -75,17 +76,14 @@ export function CourseFormDialog({ instructors, course, trigger }: CourseFormDia
       open={open}
       onOpenChange={(next) => {
         if (pending) return;
-        if (next) {
-          reset(defaults);
-          setSlugTouched(Boolean(course));
-        }
+        if (next) reset(defaults);
         setOpen(next);
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{course ? "Eğitimi düzenle" : "Yeni eğitim"}</DialogTitle>
+          <DialogTitle>{course ? "Programı düzenle" : "Yeni program"}</DialogTitle>
           <DialogDescription>Eğitmen, eğitimin oturumlarını ve ödevlerini kendi panelinden yönetir.</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
@@ -100,15 +98,8 @@ export function CourseFormDialog({ instructors, course, trigger }: CourseFormDia
               }}
             />
           </FormField>
-          <FormField id="slug" label="Adres" hint="app.hedeflerbir.com/courses/…" error={errors.slug?.message}>
-            <Input
-              id="slug"
-              className="font-mono text-xs"
-              aria-invalid={Boolean(errors.slug)}
-              aria-describedby="slug-message"
-              {...register("slug", { onChange: () => setSlugTouched(true) })}
-            />
-          </FormField>
+          {/* The URL slug is derived from the title; a slug clash is reported on the title field. */}
+          {errors.slug?.message ? <p className="-mt-2 text-xs text-destructive">{errors.slug.message}</p> : null}
           <FormField id="instructorId" label="Eğitmen" error={errors.instructorId?.message}>
             <NativeSelect id="instructorId" {...a11y("instructorId")} {...register("instructorId")}>
               {instructors.length === 0 ? <option value="">Önce bir eğitmen hesabı oluşturun</option> : null}

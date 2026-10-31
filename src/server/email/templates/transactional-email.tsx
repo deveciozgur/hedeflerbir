@@ -20,7 +20,7 @@ export interface TransactionalEmailProps {
   cta?: { label: string; href: string };
 }
 
-const colors = { text: "#18181b", muted: "#71717a", border: "#e4e4e7", brand: "#4f46e5", surface: "#fafafa" };
+const colors = { text: "#18181b", muted: "#71717a", border: "#e4e4e7", brand: "#008374", surface: "#fafafa" };
 
 /** Shared corporate layout for every transactional e-mail. */
 export function TransactionalEmail({ preview, heading, greeting, intro, details, cta }: TransactionalEmailProps) {

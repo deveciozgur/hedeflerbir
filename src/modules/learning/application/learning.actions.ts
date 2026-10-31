@@ -207,13 +207,17 @@ export async function updateSessionAction(sessionId: unknown, input: unknown): P
 
 // ───────────────────────────── Instructor: attendance ─────────────────────────────
 
+/** Roll call for a live training: admins for any training, instructors for their own courses or sessions. */
 export async function saveAttendanceAction(input: unknown): Promise<ActionResult<{ saved: number }>> {
-  const instructor = await requireRole("INSTRUCTOR");
+  const user = await requireRole("INSTRUCTOR", "ADMIN");
   const parsed = attendanceInputSchema.safeParse(input);
   if (!parsed.success) return fail("Geçersiz yoklama verisi.");
 
   const session = await db.courseSession.findFirst({
-    where: { id: parsed.data.sessionId, course: { instructorId: instructor.id } },
+    where: {
+      id: parsed.data.sessionId,
+      ...(user.role === "INSTRUCTOR" ? { OR: [{ course: { instructorId: user.id } }, { instructorId: user.id }] } : {}),
+    },
     select: { id: true, scheduleDate: true, course: { select: { id: true, enrollments: { select: { studentId: true } } } } },
   });
   if (!session) return fail("Oturum bulunamadı.");
@@ -234,5 +238,8 @@ export async function saveAttendanceAction(input: unknown): Promise<ActionResult
 
   after(() => awardBadgesSafely(records.filter((r) => r.status === "PRESENT").map((r) => r.studentId)));
   revalidatePath(`/instructor/courses/${session.course.id}`);
+  revalidatePath("/admin", "layout");
+  revalidatePath("/trainings", "layout");
+  revalidatePath("/dashboard");
   return ok({ saved: records.length });
 }

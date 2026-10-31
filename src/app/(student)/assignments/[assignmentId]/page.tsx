@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowLeft, CalendarDays, Trophy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/format";
@@ -15,6 +16,8 @@ export const metadata: Metadata = { title: "Ödev" };
 export default async function AssignmentDetailPage({ params }: { params: Promise<{ assignmentId: string }> }) {
   const [{ assignmentId }, viewer] = await Promise.all([params, getViewer("STUDENT")]);
   const assignment = await getStudentAssignmentDetail(viewer.id, assignmentId);
+  // Training assignments are handed in on the training page.
+  if (assignment.sessionId) redirect(`/trainings/${assignment.sessionId}`);
   const { submission } = assignment;
   const status = submission?.status ?? null;
 

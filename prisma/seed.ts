@@ -3,6 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { PrismaClient, Role, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { DEFAULT_DEMO_PASSWORD, DEMO_ACCOUNTS, demoPassword } from "../src/modules/identity/domain/demo-accounts";
+import { BADGES } from "../src/modules/engagement/domain/badges";
 import { partitionConflicts } from "../src/modules/mentoring/domain/availability";
 import { cellsToRanges, materializeTemplate } from "../src/modules/mentoring/domain/weekly-template";
 
@@ -114,8 +115,10 @@ async function seedCourse(instructorId: string, studentId: string) {
       title: "Next.js 15 ile Sıfırdan İleri Seviye Web Geliştirme",
       description: "App Router, Server Components, Server Actions ve production deployment ile uçtan uca modern web geliştirme.",
       instructorId,
+      // Self-paced course: kept as a draft while the programme runs as live trainings.
+      status: "DRAFT",
     },
-    update: { instructorId, status: "PUBLISHED", level: "INTERMEDIATE" },
+    update: { instructorId, status: "DRAFT", level: "INTERMEDIATE" },
     select: { id: true, slug: true },
   });
 
@@ -375,6 +378,154 @@ async function seedCourseAnnouncement(authorId: string, courseId: string) {
   });
 }
 
+// ───────────────────────────── Live training programme ─────────────────────────────
+
+const PROGRAM_TRAININGS = [
+  { badgeCode: "dunyaya_karsi_sorumluluk", title: "Dünyaya Karşı Sorumluluk", day: -14, topics: "Sürdürülebilir kalkınma amaçları\nSorumlu üretim ve tüketim\nBireysel ve kurumsal etki" },
+  { badgeCode: "sosyal_inovasyon", title: "Sosyal İnovasyon", day: -7, topics: "Sosyal problem tanımlama\nTasarım odaklı düşünme\nÖrnek vaka analizleri" },
+  { badgeCode: "sosyal_etki_olcumu", title: "Sosyal Etki Ölçümü", day: -2, topics: "Değişim teorisi\nEtki göstergeleri ve veri toplama\nRaporlama" },
+  { badgeCode: "uretken_yapay_zeka", title: "Üretken Yapay Zeka", day: 3, topics: "Büyük dil modelleri nasıl çalışır?\nİstem (prompt) tasarımı\nSorumlu yapay zeka kullanımı" },
+  { badgeCode: "girisimcilik", title: "Girişimcilik", day: 10, topics: "Problem-çözüm uyumu\nİş modeli kanvası\nİlk müşteri görüşmeleri" },
+  { badgeCode: "sunum_teknikleri", title: "Sunum Teknikleri", day: 17, topics: "Hikâye anlatıcılığı\nSlayt tasarımı\nJüri önünde sunum provası" },
+] as const;
+
+const DEMO_TEAMMATES = [
+  { email: "ayse.yildiz@demo.hedeflerbir.com", name: "Ayşe", surname: "Yıldız", department: "Endüstri Mühendisliği", city: "İzmir" },
+  { email: "emre.kaya@demo.hedeflerbir.com", name: "Emre", surname: "Kaya", department: "İşletme", city: "Ankara" },
+] as const;
+
+/** Teams, the live-training programme (one badge per training), attendance, a training assignment and a completed team mentoring session. */
+async function seedProgram(instructorId: string, studentId: string, mentorId: string) {
+  const atlas = await prisma.team.upsert({
+    where: { name: "Takım Atlas" },
+    create: { name: "Takım Atlas", focusArea: "Sosyal etki odaklı eğitim teknolojisi" },
+    update: {},
+    select: { id: true },
+  });
+  await prisma.team.upsert({ where: { name: "Takım Nova" }, create: { name: "Takım Nova", focusArea: "Yapay zeka destekli girişimcilik" }, update: {} });
+
+  await prisma.user.update({
+    where: { id: studentId },
+    data: { teamId: atlas.id, profile: { update: { department: "Bilgisayar Mühendisliği", city: "İstanbul" } } },
+  });
+  // Teammates for "Ekibim": invited participants without a password (they can't sign in until invited).
+  const teammates = [];
+  for (const mate of DEMO_TEAMMATES) {
+    const profile = { department: mate.department, city: mate.city, bio: `${mate.department} öğrencisi, HedeflerBir katılımcısı.` };
+    teammates.push(
+      await prisma.user.upsert({
+        where: { email: mate.email },
+        create: { email: mate.email, name: mate.name, surname: mate.surname, role: Role.STUDENT, teamId: atlas.id, profile: { create: profile } },
+        update: { teamId: atlas.id, profile: { upsert: { create: profile, update: profile } } },
+        select: { id: true },
+      }),
+    );
+  }
+
+  const program = await prisma.course.upsert({
+    where: { slug: "hedeflerbir-2026" },
+    create: {
+      slug: "hedeflerbir-2026",
+      title: "HedeflerBir 2026 Programı",
+      description: "Sosyal etki, inovasyon ve girişimcilik odaklı canlı eğitim ve mentorluk programı.",
+      instructorId,
+    },
+    update: { instructorId, status: "PUBLISHED" },
+    select: { id: true },
+  });
+  for (const participant of [studentId, ...teammates.map((t) => t.id)]) {
+    await prisma.enrollment.upsert({
+      where: { studentId_courseId: { studentId: participant, courseId: program.id } },
+      create: { studentId: participant, courseId: program.id },
+      update: {},
+    });
+  }
+
+  const sessionIds: Record<string, string> = {};
+  for (const [index, t] of PROGRAM_TRAININGS.entries()) {
+    const session = await prisma.courseSession.upsert({
+      where: { courseId_order: { courseId: program.id, order: index + 1 } },
+      create: {
+        courseId: program.id,
+        order: index + 1,
+        title: t.title,
+        topics: t.topics,
+        badgeCode: t.badgeCode,
+        instructorId,
+        scheduleDate: at(t.day, 19),
+        durationMinutes: 90,
+        meetingUrl: "https://meet.google.com/hed-egitim-001",
+      },
+      update: { title: t.title, topics: t.topics, badgeCode: t.badgeCode, instructorId, scheduleDate: at(t.day, 19) },
+      select: { id: true },
+    });
+    sessionIds[t.badgeCode] = session.id;
+  }
+
+  // Roll calls for the past trainings: Can attended two, missed one.
+  const rollCall: Array<[string, string, "PRESENT" | "ABSENT"]> = [
+    ["dunyaya_karsi_sorumluluk", studentId, "PRESENT"],
+    ["sosyal_inovasyon", studentId, "PRESENT"],
+    ["sosyal_etki_olcumu", studentId, "ABSENT"],
+    ...teammates.flatMap((mate) => [
+      ["dunyaya_karsi_sorumluluk", mate.id, "PRESENT"] as [string, string, "PRESENT"],
+      ["sosyal_inovasyon", mate.id, "ABSENT"] as [string, string, "ABSENT"],
+      ["sosyal_etki_olcumu", mate.id, "PRESENT"] as [string, string, "PRESENT"],
+    ]),
+  ];
+  for (const [code, participant, status] of rollCall) {
+    await prisma.sessionAttendance.upsert({
+      where: { sessionId_studentId: { sessionId: sessionIds[code]!, studentId: participant } },
+      create: { sessionId: sessionIds[code]!, studentId: participant, status },
+      update: { status },
+    });
+  }
+
+  const title = "Sosyal Etki Ölçüm Planı";
+  const assignmentData = {
+    description: "Projeniz için bir değişim teorisi taslağı ve en az üç etki göstergesi içeren tek sayfalık bir plan yükleyin.",
+    dueDate: at(5, 23, 59),
+    maxScore: 100,
+    sessionId: sessionIds.sosyal_etki_olcumu!,
+  };
+  const existing = await prisma.assignment.findFirst({ where: { courseId: program.id, title }, select: { id: true } });
+  if (existing) await prisma.assignment.update({ where: { id: existing.id }, data: assignmentData });
+  else await prisma.assignment.create({ data: { courseId: program.id, title, ...assignmentData } });
+
+  // A completed team session last week (earns "1. Mentorluk Seansı"), and the upcoming one goes to the team too.
+  const pastStart = at(-5, 18);
+  const pastSlot = await prisma.mentorSlot.upsert({
+    where: { mentorId_startTime: { mentorId, startTime: pastStart } },
+    create: { mentorId, startTime: pastStart, endTime: new Date(pastStart.getTime() + 60 * 60_000), isBooked: true },
+    update: { isBooked: true },
+    select: { id: true },
+  });
+  if (!(await prisma.appointment.findFirst({ where: { slotId: pastSlot.id }, select: { id: true } }))) {
+    await prisma.appointment.create({
+      data: { slotId: pastSlot.id, studentId, mentorId, teamId: atlas.id, status: "COMPLETED", notes: "Proje fikri ve hedef kitle doğrulaması." },
+    });
+  }
+  await prisma.appointment.updateMany({ where: { mentorId, studentId, teamId: null }, data: { teamId: atlas.id } });
+
+  // Badges the roll calls and the completed session earn (the app awards these automatically on later events).
+  const earned: Array<[string, string]> = [
+    ["dunyaya_karsi_sorumluluk", studentId],
+    ["sosyal_inovasyon", studentId],
+    ["mentorluk_seansi_1", studentId],
+    ...teammates.flatMap((mate) => [["dunyaya_karsi_sorumluluk", mate.id], ["sosyal_etki_olcumu", mate.id], ["mentorluk_seansi_1", mate.id]] as Array<[string, string]>),
+  ];
+  for (const [code, userId] of earned) {
+    const def = BADGES.find((b) => b.code === code)!;
+    const badge = await prisma.badge.upsert({
+      where: { code },
+      create: { code, name: def.name, description: def.description, icon: def.icon },
+      update: { name: def.name, description: def.description, icon: def.icon },
+      select: { id: true },
+    });
+    await prisma.userBadge.upsert({ where: { userId_badgeId: { userId, badgeId: badge.id } }, create: { userId, badgeId: badge.id }, update: {} });
+  }
+}
+
 async function main() {
   assertSafeEnvironment();
   const password = demoPassword();
@@ -386,6 +537,7 @@ async function main() {
   await seedProject(users.STUDENT.id);
   await seedMentoring(users.MENTOR.id, users.STUDENT.id);
   await seedWeeklyAvailability(users.MENTOR.id);
+  await seedProgram(users.INSTRUCTOR.id, users.STUDENT.id, users.MENTOR.id);
   await seedAnnouncement(users.ADMIN.id);
   await seedCourseAnnouncement(users.INSTRUCTOR.id, course.id);
 

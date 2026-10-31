@@ -9,7 +9,7 @@ import { DeadlineBadge, SubmissionStatusBadge } from "./status-badges";
 function AssignmentCardLink({ item }: { item: StudentAssignmentCard }) {
   return (
     <Link
-      href={`/assignments/${item.id}`}
+      href={item.href}
       className="group flex flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-[border-color,background-color] duration-150 outline-none hover:border-border-strong hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <div className="flex flex-col gap-1">
