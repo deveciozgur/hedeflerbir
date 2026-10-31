@@ -1,0 +1,36 @@
+diff --git a/node_modules/minimatch/dist/commonjs/index.js b/node_modules/minimatch/dist/commonjs/index.js
+index eb1c915..2d7de98 100644
+--- a/node_modules/minimatch/dist/commonjs/index.js
++++ b/node_modules/minimatch/dist/commonjs/index.js
+@@ -1548,3 +1548,14 @@ exports.minimatch.Minimatch = Minimatch;
+ exports.minimatch.escape = escape_js_1.escape;
+ exports.minimatch.unescape = unescape_js_1.unescape;
+ //# sourceMappingURL=index.js.map
++// --- HedeflerBir compat patch (patches/minimatch+11.0.3.patch) ---
++// minimatch >=10 exports a namespace object; ESLint's toolchain still calls it as
++// `require('minimatch')(path, pattern)` / via a default import, and uses `.makeRe`.
++// Re-export the v11 matcher with that v3-style shape. Matching logic is untouched.
++if (typeof exports.minimatch.makeRe !== 'function') {
++    exports.minimatch.makeRe = (pattern, options = {}) => {
++        const mm = new Minimatch(pattern, options);
++        return { test: (s) => mm.match(s), source: pattern };
++    };
++}
++module.exports = Object.assign(exports.minimatch, exports, { default: exports.minimatch, makeRe: exports.minimatch.makeRe });
+diff --git a/node_modules/minimatch/dist/esm/index.js b/node_modules/minimatch/dist/esm/index.js
+index 1dc27e6..6e72bf0 100644
+--- a/node_modules/minimatch/dist/esm/index.js
++++ b/node_modules/minimatch/dist/esm/index.js
+@@ -1537,3 +1537,12 @@ minimatch.Minimatch = Minimatch;
+ minimatch.escape = escape;
+ minimatch.unescape = unescape;
+ //# sourceMappingURL=index.js.map
++// --- HedeflerBir compat patch (patches/minimatch+11.0.3.patch) ---
++// Default export for ESLint's `import minimatch from "minimatch"`; see the commonjs build.
++if (typeof minimatch.makeRe !== 'function') {
++    minimatch.makeRe = (pattern, options = {}) => {
++        const mm = new Minimatch(pattern, options);
++        return { test: (s) => mm.match(s), source: pattern };
++    };
++}
++export default minimatch;
