@@ -51,6 +51,26 @@ DDD bounded contexts in `src/modules/<context>/{domain,application,ui}`:
 - `src/app/**` pages stay thin: fetch via queries, render module UI. Page files may not export non-page constants.
 - Infrastructure ports in `src/server/`: `db.ts`, `storage/` (local disk or S3/R2), `email/` (Resend; dev prints to console; `emailDeliveryConfigured()`), `audit.ts` (`recordAudit`, never throws), `export/` (CSV/XLSX/PDF, fonts in `pdf-fonts.ts`).
 
+### Where things already are (extend these; don't create parallel models or routes)
+
+Feature briefs often use generic names. They map to existing pieces:
+
+| Brief says | Actually is |
+| --- | --- |
+| `CourseEnrollment` | `Enrollment` (+ `status`, `completedAt`) |
+| `AssignmentSubmission` (PENDING/REVIEWED/REJECTED) | `Submission` (SUBMITTED/GRADED/RETURNED) + `AssignmentFeedback` history |
+| `MentorshipSession` | `Appointment` on a `MentorSlot` (auto-confirmed, no PENDING state) |
+| `MentorProfile` | `Profile` (`title`, `expertiseArea`, `meetingUrl`, `socialLinks`) + `MentorAvailability` |
+| `db push` | a migration file (`/db-sync`) |
+| `/student/courses/[slug]/player` | `/courses/[slug]?lesson=<id>` |
+| `/expert/grading` | `/instructor/assignments/[assignmentId]` (grading desk) |
+| `/mentors/booking` | `/mentors` (modal) and `/mentors/[mentorId]`, `slot-picker.tsx` |
+| course builder | `/instructor/courses/[courseId]` "Müfredat" tab (`curriculum-builder.tsx`) |
+| `src/actions/...` | `src/modules/<context>/application/*.actions.ts` |
+| `updateLessonProgress` | `saveLessonProgressAction` / `markLessonCompleteAction` → `completeLesson()`; % via `lessonCompletion()` |
+
+Other areas: `/admin/users` (single create + CSV import), `/admin/audit`, `/admin` analytics, `/mentor/availability` (weekly planner), `/profile` (certificates), Cmd/Ctrl+K palette in every shell (`components/layout/command-palette.tsx`).
+
 ### Key flows
 
 - **Lesson completion** always goes through `completeLesson()`; it upserts `LessonProgress`, and when the last lesson is done it marks the enrollment `COMPLETED`, issues the `Certificate` and notifies. Videos complete at 90% watched, quizzes when passed, assignment lessons on submission (plus backfill when a lesson is linked to an already-submitted assignment), articles/live sessions/embedded videos via the manual button.
@@ -58,6 +78,7 @@ DDD bounded contexts in `src/modules/<context>/{domain,application,ui}`:
 - **Certificates**: `/api/certificates/[code]` (PDF, public by code) and `/verify/[code]` (public, outside every RBAC area).
 - **Mentor availability**: weekly `MentorAvailability` ranges generate `MentorSlot`s (`generated: true`) on a rolling 28-day window; `topUpTemplateSlots()` runs when students browse mentors. Never delete slots that have appointments (cancelled ones are history).
 - **Audit**: add new event names to `modules/administration/domain/audit.ts` and call `recordAudit` after the mutation.
+- **CSV user import** (`importUsersAction`, parser in `administration/domain/user-import.ts`): loose TR/EN headers, optional `rol` and `sifre` columns, max 500 rows, written in chunks of 50 with per-row error isolation. Rows with a password are bcrypt-hashed (cost 12); rows without get a 72-hour set-password invite (reuses the reset-token flow), e-mailed or, without Resend, returned as links for the admin. Template: `public/templates/kullanici_yukleme_sablonu.csv`. Existing e-mails are skipped, never overwritten.
 
 ## Database
 
@@ -68,13 +89,13 @@ DDD bounded contexts in `src/modules/<context>/{domain,application,ui}`:
   npx prisma migrate deploy
   ```
 - **Every new table needs** `ALTER TABLE "X" ENABLE ROW LEVEL SECURITY;` appended to its migration. Supabase exposes `public` via its REST API; the app connects as the table owner, so RLS without policies only locks out anon access. All current tables have RLS on.
-- Production migrations are applied from a local machine (`prisma migrate deploy` with the Supabase URLs); the Hostinger build does not run them.
+- Production migrations are applied from a local machine with `npm run db:deploy:prod` (check first with `db:status:prod`); the Hostinger build does not run them.
 - Local DB: `npx prisma dev --name hedeflerbir --detach` (PGlite on localhost:51214). `DATABASE_URL` needs `&connection_limit=1&pgbouncer=true`. If it stops answering: `npx prisma dev stop hedeflerbir`, then start again (a stale lock file is common).
 - Windows: stop the dev server (and orphan node processes) before `prisma generate` / `npm install`, or the engine DLL rename fails with EPERM.
 
 ## Seed
 
-`prisma/seed.ts` is idempotent (upserts by natural keys) and resets the four demo accounts' passwords to `SEED_PASSWORD` (default `HedeflerBir2026!`) on every run. It refuses `NODE_ENV=production` unless `SEED_ALLOW_PRODUCTION=true`. Demo accounts are defined once in `src/modules/identity/domain/demo-accounts.ts`; the login pages show "Demo ... Doldur" buttons only outside production (or with `DEMO_LOGIN_ENABLED=true`). The production `SEED_PASSWORD` lives in the git-ignored `.env.hostinger.local`; never copy it into tracked files.
+`prisma/seed.ts` is idempotent (upserts by natural keys; quiz questions are only created when the quiz has none) and resets the four demo accounts' passwords to `SEED_PASSWORD` (default `HedeflerBir2026!`) on every run. It refuses `NODE_ENV=production` unless `SEED_ALLOW_PRODUCTION=true`. Demo accounts are defined once in `src/modules/identity/domain/demo-accounts.ts`; the login pages show "Demo ... Doldur" buttons only outside production (or with `DEMO_LOGIN_ENABLED=true`). The production `SEED_PASSWORD` lives in the git-ignored `.env.hostinger.local`; never copy it into tracked files. The seed table prints the password only when it is the default; a custom one shows as `SEED_PASSWORD`.
 
 ## Deployment (Hostinger Node.js app)
 
@@ -82,6 +103,7 @@ DDD bounded contexts in `src/modules/<context>/{domain,application,ui}`:
 - `next.config.ts` builds with `experimental.cpus: 1` and no webpack build worker: the shared host's process limit otherwise kills static generation with `spawn EAGAIN`. Don't remove it.
 - Every route that renders a PDF must list its fonts/assets in `outputFileTracingIncludes`.
 - A failed build keeps the previous version live; confirm a deploy by hitting a route that only exists in the new code.
+- Each deploy publishes into a fresh version folder. Until `S3_*` (R2) or an absolute `UPLOADS_DIR` outside the app folder is set in hPanel, uploaded files (submissions, avatars) are lost on the next deploy. `RESEND_API_KEY` is not set yet either: e-mails are skipped (invites fall back to links).
 
 ## Conventions
 
@@ -92,3 +114,4 @@ DDD bounded contexts in `src/modules/<context>/{domain,application,ui}`:
 - Hydration: give `DndContext` a stable `id` (`useId`); header widgets that render Radix dialogs mount after hydration (see `command-palette.tsx`).
 - ESLint (`@next/next`) rejects variables named `module`; use `courseModule`.
 - Git: there is no global identity on this machine; commit with `git -c user.name="HedeflerBir" -c user.email="info@gamedev.ist" commit ...`.
+- Editing on Windows: prefer the Edit/Write tools. Python run from a Git Bash heredoc can mangle `\uXXXX` escapes and backslashes in the text it writes; put multi-line edit scripts in a file instead.
