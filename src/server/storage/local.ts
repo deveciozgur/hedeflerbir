@@ -3,9 +3,13 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 import { attachmentDisposition, type DownloadOptions, type FileStorage } from "./types";
 
-/** Development adapter — files live in ./.uploads (git-ignored). */
+/**
+ * Disk adapter — development default, and the production fallback until S3/R2 is configured.
+ * Files live in UPLOADS_DIR (default ./.uploads, git-ignored). On a host that wipes the app
+ * folder on redeploy, point UPLOADS_DIR at a persistent directory outside it.
+ */
 export class LocalFileStorage implements FileStorage {
-  private readonly root = resolve(process.cwd(), ".uploads");
+  private readonly root = resolve(process.cwd(), process.env.UPLOADS_DIR?.trim() || ".uploads");
 
   private pathFor(key: string): string {
     const target = resolve(join(this.root, key));

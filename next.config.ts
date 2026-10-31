@@ -11,7 +11,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  output: "standalone",
+  // Default build runs with `next start` (Hostinger, most Node hosts). Docker/self-contained
+  // deploys set NEXT_OUTPUT=standalone and run `node .next/standalone/server.js`.
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   serverExternalPackages: ["@react-pdf/renderer", "exceljs"],
   // PDF exports embed Geist (Turkish glyphs) from node_modules at runtime — make sure standalone ships it.
   outputFileTracingIncludes: {

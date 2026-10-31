@@ -2,10 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Toaster } from "@/components/ui/toaster";
+import { appBaseUrl } from "@/server/config";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.AUTH_URL ?? "https://app.hedeflerbir.com"),
+  metadataBase: appBaseUrl(),
   title: { default: "HedeflerBir", template: "%s · HedeflerBir" },
   description: "HedeflerBir öğrenme platformu — eğitimler, ödevler ve mentorluk tek yerde.",
   robots: { index: false, follow: false },

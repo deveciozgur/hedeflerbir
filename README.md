@@ -57,4 +57,26 @@ src/
 
 ## Deployment
 
-`output: "standalone"` açıktır. Production ortamında `AUTH_URL=https://app.hedeflerbir.com`, `AUTH_SECRET` ve `DATABASE_URL` zorunludur; build öncesi `npm run db:deploy` çalıştırın.
+**Zorunlu:** `DATABASE_URL` (PostgreSQL), `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST=true`.
+**Opsiyonel (boş ya da `disabled` ⇒ güvenli fallback):** Resend (`RESEND_API_KEY`, `EMAIL_FROM`) ve S3/R2 (`S3_*`).
+Build hiçbir ortam değişkeni olmadan da geçer; harici servisler yalnızca çalışma anında, gerçek değer verildiğinde devreye girer.
+
+| Servis yok | Davranış |
+| --- | --- |
+| Resend | E-postalar atlanır; logda yalnızca alıcı ve konu görünür (sıfırlama bağlantıları loglanmaz). |
+| S3/R2 | Yüklemeler yerel diske (`UPLOADS_DIR`, varsayılan `.uploads`) yazılır; ilk kullanımda uyarı loglanır. |
+| Geçersiz `AUTH_URL` | `https://app.hedeflerbir.com` kullanılır, uyarı loglanır. |
+
+### Hostinger (Node.js Web App)
+
+1. **Veritabanı:** Hostinger'ın yönetilen veritabanları MySQL'dir; bu proje **PostgreSQL** kullanır. Neon veya Supabase gibi bir Postgres oluşturup bağlantı adresini `DATABASE_URL` olarak girin (`?sslmode=require`; havuzlanmış/pooler adresi kullanıyorsanız sonuna `&pgbouncer=true` ekleyin).
+2. **Ortam değişkenleri:** hPanel'e girin. Build ve start komutları varsayılan kalabilir: `npm run build` (Prisma client'ı da üretir) ve `npm start`.
+3. **Migration (ilk deploy ve her şema değişikliğinde):** kendi bilgisayarınızdan, üretim `DATABASE_URL`'i ile:
+   ```bash
+   DATABASE_URL="postgresql://…" npx prisma migrate deploy
+   ```
+4. **İlk yönetici hesabı (yalnızca boş veritabanında, bir kez):** `DATABASE_URL="postgresql://…" SEED_PASSWORD="…" npm run db:seed` — ardından demo hesapları silin/askıya alın ve yönetici şifresini değiştirin.
+5. **Alan adı:** geçici domain ile test ederken `AUTH_URL`'i o adrese, `app.hedeflerbir.com`'a geçince tekrar bu adrese ayarlayın.
+6. **Yüklemeler:** S3/R2 tanımlanana kadar dosyalar sunucu diskinde durur ve yeniden deploy'da silinebilir. Kalıcılık için R2 bilgilerini girin ya da `UPLOADS_DIR`'i uygulama klasörü dışında kalıcı bir dizine yönlendirin.
+
+Docker/self-contained kurulum için `NEXT_OUTPUT=standalone` ile build alıp `node .next/standalone/server.js` çalıştırın.
