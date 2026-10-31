@@ -9,7 +9,7 @@ cp .env.example .env          # AUTH_SECRET için: npx auth secret
 docker compose up -d          # veya Neon / Supabase gibi bir Postgres URL'i
 npm install
 npm run db:deploy             # prisma/migrations altındaki migration'ları uygular
-npm run db:seed               # demo hesaplar (yalnızca boş veritabanında)
+npm run db:seed               # demo hesaplar ve örnek veri (idempotent, tekrar çalıştırılabilir)
 npm run dev
 ```
 
@@ -19,14 +19,14 @@ npm run dev
 
 `RESEND_API_KEY` boşsa e-postalar gönderilmez; düz metin hâli (bağlantılar dahil) sunucu konsoluna yazılır.
 
-Seed hesapları (`SEED_PASSWORD`, varsayılan `.env.example` içinde):
+Demo hesapları (şifre `SEED_PASSWORD`, tanımlı değilse `HedeflerBir2026!`). Seed her çalıştığında bu hesapların şifresini yeniden ayarlar; geliştirme ortamında giriş sayfalarındaki "Demo ... Doldur" butonları formu doldurur (production'da yalnızca `DEMO_LOGIN_ENABLED=true` ile görünür).
 
-| Rol | E-posta | Giriş kapısı |
-| --- | --- | --- |
-| Yönetici | admin@hedeflerbir.com | `/login` |
-| Eğitmen | egitmen@hedeflerbir.com | `/expert-login` |
-| Mentor | mentor@hedeflerbir.com | `/expert-login` |
-| Katılımcı | katilimci@hedeflerbir.com | `/login` |
+| Rol | Ad Soyad | E-posta | Giriş kapısı |
+| --- | --- | --- | --- |
+| Yönetici | Sistem Yöneticisi | admin@hedeflerbir.com | `/login` |
+| Eğitmen | Ahmet Yılmaz | egitmen@hedeflerbir.com | `/expert-login` |
+| Mentor | Burak Demir | mentor@hedeflerbir.com | `/expert-login` |
+| Öğrenci | Can Öztürk | ogrenci@hedeflerbir.com | `/login` |
 
 ## Mimari
 
@@ -75,7 +75,7 @@ Build hiçbir ortam değişkeni olmadan da geçer; harici servisler yalnızca ç
    ```bash
    DATABASE_URL="postgresql://…" npx prisma migrate deploy
    ```
-4. **İlk yönetici hesabı (yalnızca boş veritabanında, bir kez):** `DATABASE_URL="postgresql://…" SEED_PASSWORD="…" npm run db:seed` — ardından demo hesapları silin/askıya alın ve yönetici şifresini değiştirin.
+4. **İlk yönetici hesabı (yalnızca boş veritabanında, bir kez):** `DATABASE_URL="postgresql://…" SEED_PASSWORD="…" SEED_ALLOW_PRODUCTION=true npm run db:seed` (seed, `NODE_ENV=production` iken bu bayrak olmadan çalışmaz) — ardından demo hesapları silin/askıya alın ve yönetici şifresini değiştirin.
 5. **Alan adı:** geçici domain ile test ederken `AUTH_URL`'i o adrese, `app.hedeflerbir.com`'a geçince tekrar bu adrese ayarlayın.
 6. **Yüklemeler:** S3/R2 tanımlanana kadar dosyalar sunucu diskinde durur ve yeniden deploy'da silinebilir. Kalıcılık için R2 bilgilerini girin ya da `UPLOADS_DIR`'i uygulama klasörü dışında kalıcı bir dizine yönlendirin.
 

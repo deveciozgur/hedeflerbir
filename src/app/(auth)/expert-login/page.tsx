@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GraduationCap, Sparkles } from "lucide-react";
+import { demoCredentialsFor } from "@/modules/identity/application/demo-login";
 import { LoginForm } from "@/modules/identity/ui/login-form";
 import { ForgotPasswordLink, ResetSuccessNotice } from "@/modules/identity/ui/login-notices";
 
@@ -23,7 +24,7 @@ export default async function ExpertLoginPage({ searchParams }: { searchParams: 
       </div>
       <ResetSuccessNotice show={reset === "success"} />
       <div className="flex flex-col gap-3">
-        <LoginForm portal="expert" callbackUrl={callbackUrl} />
+        <LoginForm portal="expert" callbackUrl={callbackUrl} demoAccounts={demoCredentialsFor("expert")} />
         <ForgotPasswordLink />
       </div>
       <p className="text-sm text-muted-foreground">

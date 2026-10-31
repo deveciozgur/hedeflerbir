@@ -3,25 +3,29 @@
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, UserRoundCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { loginAction } from "../application/auth.actions";
+import type { DemoCredential } from "../application/demo-login";
 import { loginSchema, type LoginInput } from "../domain/credentials";
 import type { Portal } from "../domain/role";
 
 interface LoginFormProps {
   portal: Portal;
   callbackUrl?: string;
+  /** Dev-only quick fill; empty in production (see demoCredentialsFor). */
+  demoAccounts?: DemoCredential[];
 }
 
-export function LoginForm({ portal, callbackUrl }: LoginFormProps) {
+export function LoginForm({ portal, callbackUrl, demoAccounts = [] }: LoginFormProps) {
   const [pending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginInput>({ resolver: zodResolver(loginSchema), defaultValues: { email: "", password: "" } });
 
@@ -81,6 +85,30 @@ export function LoginForm({ portal, callbackUrl }: LoginFormProps) {
         {pending ? <Loader2 className="animate-spin" aria-hidden /> : null}
         {pending ? "Giriş yapılıyor…" : "Giriş yap"}
       </Button>
+
+      {demoAccounts.length > 0 ? (
+        <div role="group" aria-label="Demo hesaplar" className="flex flex-col gap-2 border-t border-dashed border-border pt-4">
+          <p className="text-xs text-subtle">Geliştirme ortamı: demo hesap bilgilerini doldur</p>
+          <div className="grid grid-cols-2 gap-2">
+            {demoAccounts.map((account) => (
+              <Button
+                key={account.email}
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={pending}
+                onClick={() => {
+                  setServerError(null);
+                  setValue("email", account.email, { shouldValidate: true });
+                  setValue("password", account.password, { shouldValidate: true });
+                }}
+              >
+                <UserRoundCheck aria-hidden /> {account.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </form>
   );
 }
