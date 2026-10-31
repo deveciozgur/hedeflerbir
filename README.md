@@ -14,7 +14,7 @@ npm run dev
 ```
 
 **Docker olmadan:** `npx prisma dev --name hedeflerbir --detach` yerel bir Postgres (PGlite) başlatır.
-Çıktıdaki TCP adresini `DATABASE_URL` olarak kullanın ve sonuna `&connection_limit=1&pgbouncer=true` ekleyin
+Çıktıdaki TCP adresini `DATABASE_URL` ve `DIRECT_URL` olarak kullanın; `DATABASE_URL`'in sonuna `&connection_limit=1&pgbouncer=true` ekleyin
 (PGlite tek bağlantı kabul eder ve hazır sorgu ifadelerini desteklemez).
 
 `RESEND_API_KEY` boşsa e-postalar gönderilmez; düz metin hâli (bağlantılar dahil) sunucu konsoluna yazılır.
@@ -57,7 +57,7 @@ src/
 
 ## Deployment
 
-**Zorunlu:** `DATABASE_URL` (PostgreSQL), `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST=true`.
+**Zorunlu:** `DATABASE_URL` (PostgreSQL, uygulama sorguları), `DIRECT_URL` (migration bağlantısı; yerelde `DATABASE_URL` ile aynı), `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST=true`.
 **Opsiyonel (boş ya da `disabled` ⇒ güvenli fallback):** Resend (`RESEND_API_KEY`, `EMAIL_FROM`) ve S3/R2 (`S3_*`).
 Build hiçbir ortam değişkeni olmadan da geçer; harici servisler yalnızca çalışma anında, gerçek değer verildiğinde devreye girer.
 
@@ -69,13 +69,16 @@ Build hiçbir ortam değişkeni olmadan da geçer; harici servisler yalnızca ç
 
 ### Hostinger (Node.js Web App)
 
-1. **Veritabanı:** Hostinger'ın yönetilen veritabanları MySQL'dir; bu proje **PostgreSQL** kullanır. Neon veya Supabase gibi bir Postgres oluşturup bağlantı adresini `DATABASE_URL` olarak girin (`?sslmode=require`; havuzlanmış/pooler adresi kullanıyorsanız sonuna `&pgbouncer=true` ekleyin).
+1. **Veritabanı:** Hostinger'ın yönetilen veritabanları MySQL'dir; bu proje **PostgreSQL** kullanır. Neon veya Supabase gibi bir Postgres kullanın. Supabase için (Project Settings → Database → Connection string):
+   - `DATABASE_URL`: transaction pooler, port **6543**, sonunda `?pgbouncer=true` (uygulama bunu kullanır).
+   - `DIRECT_URL`: session pooler, port **5432** (yalnızca `prisma migrate` kullanır).
+   - Şifrede `@ : / ? # %` gibi karakterler varsa URL-encode edin (ör. `@` → `%40`).
 2. **Ortam değişkenleri:** hPanel'e girin. Build ve start komutları varsayılan kalabilir: `npm run build` (Prisma client'ı da üretir) ve `npm start`.
 3. **Migration (ilk deploy ve her şema değişikliğinde):** kendi bilgisayarınızdan, üretim `DATABASE_URL`'i ile:
    ```bash
-   DATABASE_URL="postgresql://…" npx prisma migrate deploy
+   DATABASE_URL="postgresql://…:6543/postgres?pgbouncer=true" DIRECT_URL="postgresql://…:5432/postgres" npx prisma migrate deploy
    ```
-4. **İlk yönetici hesabı (yalnızca boş veritabanında, bir kez):** `DATABASE_URL="postgresql://…" SEED_PASSWORD="…" SEED_ALLOW_PRODUCTION=true npm run db:seed` (seed, `NODE_ENV=production` iken bu bayrak olmadan çalışmaz) — ardından demo hesapları silin/askıya alın ve yönetici şifresini değiştirin.
+4. **İlk yönetici hesabı (yalnızca boş veritabanında, bir kez):** `DATABASE_URL="postgresql://…" DIRECT_URL="postgresql://…" SEED_PASSWORD="…" SEED_ALLOW_PRODUCTION=true npm run db:seed` (seed, `NODE_ENV=production` iken bu bayrak olmadan çalışmaz) — ardından demo hesapları silin/askıya alın ve yönetici şifresini değiştirin.
 5. **Alan adı:** geçici domain ile test ederken `AUTH_URL`'i o adrese, `app.hedeflerbir.com`'a geçince tekrar bu adrese ayarlayın.
 6. **Yüklemeler:** S3/R2 tanımlanana kadar dosyalar sunucu diskinde durur ve yeniden deploy'da silinebilir. Kalıcılık için R2 bilgilerini girin ya da `UPLOADS_DIR`'i uygulama klasörü dışında kalıcı bir dizine yönlendirin.
 
