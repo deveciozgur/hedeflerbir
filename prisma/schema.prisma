@@ -1,0 +1,397 @@
+// HedeflerBir LMS — relational model
+// Bounded contexts: Identity · Learning · Assignments · Mentoring · Messaging · Engagement
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum Role {
+  STUDENT
+  INSTRUCTOR
+  MENTOR
+  ADMIN
+}
+
+enum ProjectProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+  RETURNED
+}
+
+enum AppointmentStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  EXCUSED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum NotificationType {
+  APPOINTMENT_BOOKED
+  APPOINTMENT_CANCELLED
+  ASSIGNMENT_CREATED
+  SUBMISSION_GRADED
+  NEW_MESSAGE
+  SYSTEM
+}
+
+// ─────────────────────────── Identity ────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  surname        String
+  email          String   @unique
+  passwordHash   String?
+  role           Role     @default(STUDENT)
+  avatarUrl      String?
+  isActive       Boolean  @default(true)
+  /// Embedded in the JWT at sign-in; bumping it revokes every existing session (e.g. after a password reset).
+  sessionVersion Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  profile             Profile?
+  passwordResetTokens PasswordResetToken[]
+
+  taughtCourses         Course[]                 @relation("CourseInstructor")
+  enrollments           Enrollment[]
+  attendances           SessionAttendance[]
+  lessonViews           LessonView[]
+  projectProgress       StudentProjectProgress[]
+  submissions           Submission[]
+  mentorSlots           MentorSlot[]
+  appointmentsAsStudent Appointment[]            @relation("AppointmentStudent")
+  appointmentsAsMentor  Appointment[]            @relation("AppointmentMentor")
+  sentMessages          Message[]                @relation("MessageSender")
+  receivedMessages      Message[]                @relation("MessageReceiver")
+  notifications         Notification[]
+  announcements         Announcement[]
+  badges                UserBadge[]
+  supportTickets        SupportTicket[]
+
+  @@index([role])
+}
+
+/// Single-use password reset token. Only the SHA-256 hash is stored — a DB leak can't be replayed.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Profile {
+  id            String  @id @default(cuid())
+  userId        String  @unique
+  bio           String? @db.Text
+  title         String?
+  expertiseArea String?
+  /// { linkedin?: string; github?: string; x?: string; website?: string }
+  socialLinks   Json    @default("{}")
+  /// Student's personal goals — visible to mentors before a session
+  goals         String? @db.Text
+  /// Mentor's default video-call room, attached to every booked appointment
+  meetingUrl    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────── Learning ────────────────────────────
+
+model Course {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  title        String
+  description  String   @db.Text
+  coverUrl     String?
+  instructorId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  instructor  User            @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
+  sessions    CourseSession[]
+  assignments Assignment[]
+  enrollments Enrollment[]
+
+  @@index([instructorId])
+}
+
+model CourseSession {
+  id              String   @id @default(cuid())
+  courseId        String
+  order           Int
+  title           String
+  description     String?  @db.Text
+  scheduleDate    DateTime
+  durationMinutes Int      @default(90)
+  meetingUrl      String?
+  recordingUrl    String?
+  /// Array<{ title: string; url: string; type: "pdf" | "link" | "file" }>
+  resources       Json     @default("[]")
+  createdAt       DateTime @default(now())
+
+  course      Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  attendances SessionAttendance[]
+  lessonViews LessonView[]
+
+  @@unique([courseId, order])
+  @@index([scheduleDate])
+}
+
+model Enrollment {
+  studentId  String
+  courseId   String
+  enrolledAt DateTime @default(now())
+
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, courseId])
+  @@index([courseId])
+}
+
+model SessionAttendance {
+  sessionId String
+  studentId String
+  status    AttendanceStatus
+
+  session CourseSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, studentId])
+  @@index([studentId])
+}
+
+/// Recording watch state — powers "continue where you left off"
+model LessonView {
+  userId          String
+  sessionId       String
+  positionSeconds Int      @default(0)
+  completed       Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session CourseSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, sessionId])
+  @@index([userId, updatedAt])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @db.Text
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime @default(now())
+
+  progress StudentProjectProgress[]
+}
+
+model StudentProjectProgress {
+  id                   String                @id @default(cuid())
+  studentId            String
+  projectId            String
+  completionPercentage Int                   @default(0)
+  status               ProjectProgressStatus @default(NOT_STARTED)
+  updatedAt            DateTime              @updatedAt
+
+  student User    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, projectId])
+  @@index([projectId])
+}
+
+// ────────────────────────── Assignments ──────────────────────────
+
+model Assignment {
+  id          String   @id @default(cuid())
+  courseId    String
+  title       String
+  description String   @db.Text
+  dueDate     DateTime
+  maxScore    Int      @default(100)
+  createdAt   DateTime @default(now())
+
+  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+
+  @@index([courseId, dueDate])
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  studentId    String
+  fileUrl      String
+  fileName     String?
+  note         String?          @db.Text
+  status       SubmissionStatus @default(SUBMITTED)
+  grade        Int?
+  feedback     String?          @db.Text
+  submittedAt  DateTime         @default(now())
+  gradedAt     DateTime?
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId])
+  @@index([studentId, status])
+}
+
+// ─────────────────────────── Mentoring ───────────────────────────
+
+model MentorSlot {
+  id        String   @id @default(cuid())
+  mentorId  String
+  startTime DateTime
+  endTime   DateTime
+  /// true = not bookable: either reserved by a CONFIRMED appointment or closed by the mentor
+  isBooked  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  mentor       User          @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@unique([mentorId, startTime])
+  @@index([startTime])
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  slotId      String
+  studentId   String
+  mentorId    String
+  status      AppointmentStatus @default(CONFIRMED)
+  meetingLink String?
+  notes       String?           @db.Text
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  slot    MentorSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  student User       @relation("AppointmentStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  mentor  User       @relation("AppointmentMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([slotId])
+  @@index([studentId, status])
+  @@index([mentorId, status])
+}
+
+// ─────────────────────────── Messaging ───────────────────────────
+
+model Message {
+  id         String    @id @default(cuid())
+  senderId   String
+  receiverId String
+  parentId   String?
+  subject    String
+  content    String    @db.Text
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  sender   User      @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User      @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  parent   Message?  @relation("MessageThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Message[] @relation("MessageThread")
+
+  @@index([receiverId, readAt])
+  @@index([senderId, createdAt])
+  @@index([parentId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+model SupportTicket {
+  id          String       @id @default(cuid())
+  requesterId String
+  subject     String
+  content     String       @db.Text
+  status      TicketStatus @default(OPEN)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  requester User @relation(fields: [requesterId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+// ────────────────────────── Engagement ───────────────────────────
+
+model Announcement {
+  id          String   @id @default(cuid())
+  authorId    String
+  title       String
+  content     String   @db.Text
+  pinned      Boolean  @default(false)
+  publishedAt DateTime @default(now())
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([publishedAt])
+}
+
+model Badge {
+  id          String @id @default(cuid())
+  code        String @unique
+  name        String
+  description String
+  /// lucide icon name, e.g. "rocket"
+  icon        String
+
+  holders UserBadge[]
+}
+
+model UserBadge {
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, badgeId])
+}
