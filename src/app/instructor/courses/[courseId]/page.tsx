@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, Clapperboard, Layers, Pencil, Plus, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clapperboard, Layers, ListTree, Pencil, Plus, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,8 +11,11 @@ import { formatDateTime } from "@/lib/format";
 import { fullName } from "@/lib/utils";
 import { getViewer } from "@/modules/identity/application/viewer.queries";
 import { getInstructorCourse } from "@/modules/learning/application/instructor-courses.queries";
+import { getCurriculumEditor } from "@/modules/learning/application/instructor-curriculum.queries";
 import { sessionEnd } from "@/modules/learning/domain/curriculum";
 import { AttendanceDialog } from "@/modules/learning/ui/attendance-dialog";
+import { CurriculumBuilder } from "@/modules/learning/ui/curriculum-builder";
+import { AnnouncementDialog } from "@/modules/engagement/ui/announcement-dialog";
 import { SessionFormDialog } from "@/modules/learning/ui/session-form-dialog";
 
 export const metadata: Metadata = { title: "Eğitim Yönetimi" };
@@ -26,8 +29,11 @@ const percent = (value: number | null) => (value === null ? "-" : `%${value}`);
 
 export default async function InstructorCoursePage({ params, searchParams }: PageProps) {
   const [{ courseId }, { tab }, viewer] = await Promise.all([params, searchParams, getViewer("INSTRUCTOR")]);
-  const course = await getInstructorCourse(viewer.id, courseId);
-  const view = tab === "roster" ? "roster" : "sessions";
+  const view = tab === "roster" || tab === "sessions" ? tab : "curriculum";
+  const [course, editor] = await Promise.all([
+    getInstructorCourse(viewer.id, courseId),
+    view === "curriculum" ? getCurriculumEditor(viewer.id, courseId) : null,
+  ]);
   const now = new Date();
   const base = `/instructor/courses/${course.id}`;
 
@@ -45,12 +51,14 @@ export default async function InstructorCoursePage({ params, searchParams }: Pag
             <h1 className="text-2xl font-semibold tracking-tight text-balance">{course.title}</h1>
             <p className="max-w-2xl text-sm text-muted-foreground">{course.description}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <AnnouncementDialog courseId={course.id} />
             <SegmentedLinks
               label="Görünüm"
               value={view}
               options={[
-                { value: "sessions", label: "Oturumlar", href: base, icon: <Layers /> },
+                { value: "curriculum", label: "Müfredat", href: base, icon: <ListTree /> },
+                { value: "sessions", label: "Canlı oturumlar", href: `${base}?tab=sessions`, icon: <Layers /> },
                 { value: "roster", label: `Katılımcılar (${course.roster.length})`, href: `${base}?tab=roster`, icon: <Users /> },
               ]}
             />
@@ -68,7 +76,9 @@ export default async function InstructorCoursePage({ params, searchParams }: Pag
         </header>
       </div>
 
-      {view === "sessions" ? (
+      {view === "curriculum" && editor ? (
+        <CurriculumBuilder editor={editor} />
+      ) : view === "sessions" ? (
         course.sessions.length === 0 ? (
           <EmptyState icon={Layers} title="Henüz oturum yok" description="İlk oturumu ekleyerek müfredatı oluşturmaya başla." />
         ) : (

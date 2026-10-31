@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/server/db";
 import { requireRole } from "@/server/auth/guards";
+import { recordAudit } from "@/server/audit";
 import { fail, ok, type ActionResult } from "@/lib/action-result";
 import { courseInputSchema, enrollmentSchema } from "../domain/course-admin";
 
@@ -95,13 +96,20 @@ export async function enrollStudentsAction(input: unknown): Promise<ActionResult
 }
 
 export async function unenrollStudentAction(courseId: unknown, studentId: unknown): Promise<ActionResult> {
-  await requireRole("ADMIN");
+  const admin = await requireRole("ADMIN");
   const ids = z.object({ courseId: z.string().min(1), studentId: z.string().min(1) }).safeParse({ courseId, studentId });
   if (!ids.success) return fail("Geçersiz istek.");
 
   // Submissions, attendance and watch history are kept for reporting.
   const { count } = await db.enrollment.deleteMany({ where: ids.data });
   if (count === 0) return fail("Kayıt bulunamadı.");
+  await recordAudit({
+    action: "enrollment.removed",
+    actorId: admin.id,
+    targetType: "course",
+    targetId: ids.data.courseId,
+    metadata: { studentId: ids.data.studentId },
+  });
 
   revalidateCourses(ids.data.courseId);
   return ok(undefined);

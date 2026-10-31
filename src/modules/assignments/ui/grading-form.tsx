@@ -35,6 +35,8 @@ export function GradingForm({ maxScore, defaultGrade, defaultFeedback, pending, 
     register,
     handleSubmit,
     setError,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -54,14 +56,26 @@ export function GradingForm({ maxScore, defaultGrade, defaultFeedback, pending, 
   return (
     <form onSubmit={submitWith("GRADED")} noValidate className="flex flex-col gap-4">
       <FormField id="grade" label={`Puan (0-${maxScore})`} error={errors.grade?.message}>
-        <Input
-          id="grade"
-          inputMode="numeric"
-          className="w-32 tabular-nums"
-          aria-invalid={Boolean(errors.grade)}
-          aria-describedby={errors.grade ? "grade-message" : undefined}
-          {...register("grade")}
-        />
+        <div className="flex items-center gap-4">
+          <Input
+            id="grade"
+            inputMode="numeric"
+            className="w-24 tabular-nums"
+            aria-invalid={Boolean(errors.grade)}
+            aria-describedby={errors.grade ? "grade-message" : undefined}
+            {...register("grade")}
+          />
+          <input
+            type="range"
+            min={0}
+            max={maxScore}
+            step={1}
+            aria-label="Puan çubuğu"
+            value={Number(watch("grade")) || 0}
+            onChange={(e) => setValue("grade", e.target.value, { shouldValidate: true })}
+            className="h-2 flex-1 cursor-pointer accent-[var(--brand)]"
+          />
+        </div>
       </FormField>
       <FormField id="feedback" label="Geri bildirim" error={errors.feedback?.message}>
         <Textarea

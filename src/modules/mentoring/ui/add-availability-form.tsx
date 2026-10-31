@@ -57,7 +57,7 @@ export function AddAvailabilityForm() {
     <Card>
       <CardHeader>
         <div>
-          <CardTitle>Müsaitlik ekle</CardTitle>
+          <CardTitle>Tek seferlik müsaitlik</CardTitle>
           <CardDescription>Çalışma aralığını seç; seans süresine göre slotlara bölünür.</CardDescription>
         </div>
       </CardHeader>

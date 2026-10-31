@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowLeft, Layers } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -7,8 +8,10 @@ import { Progress } from "@/components/ui/progress";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { fullName } from "@/lib/utils";
 import { getViewer } from "@/modules/identity/application/viewer.queries";
+import { courseHasLessons, getCoursePlayer } from "@/modules/learning/application/course-player.queries";
 import { getStudentCourse } from "@/modules/learning/application/student-courses.queries";
 import { defaultSessionId } from "@/modules/learning/domain/curriculum";
+import { CoursePlayerScreen } from "@/modules/learning/ui/course-player-screen";
 import { CurriculumList } from "@/modules/learning/ui/curriculum-list";
 import { ResourceList } from "@/modules/learning/ui/resource-list";
 import { SessionStage } from "@/modules/learning/ui/session-stage";
@@ -17,11 +20,19 @@ export const metadata: Metadata = { title: "Eğitim" };
 
 interface CoursePageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ session?: string; t?: string }>;
+  searchParams: Promise<{ session?: string; t?: string; lesson?: string }>;
 }
 
 export default async function CourseDetailPage({ params, searchParams }: CoursePageProps) {
   const [{ slug }, query, viewer] = await Promise.all([params, searchParams, getViewer("STUDENT")]);
+  // Courses with a module/lesson outline get the course player; older session-only courses keep the session view.
+  if (await courseHasLessons(slug)) {
+    const player = await getCoursePlayer(viewer.id, slug, query.lesson);
+    // Pin the default lesson in the URL, so completing it (which re-renders the page) doesn't jump to the next one.
+    if (player.active && query.lesson !== player.active.id) redirect(`/courses/${slug}?lesson=${player.active.id}`);
+    return <CoursePlayerScreen course={player} />;
+  }
+
   const course = await getStudentCourse(viewer.id, slug);
 
   const activeId = course.sessions.some((s) => s.id === query.session) ? query.session : defaultSessionId(course.sessions);

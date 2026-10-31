@@ -2,6 +2,7 @@
 
 import { CheckCircle2, Mail, Target, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { AddToCalendar } from "@/components/ui/add-to-calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -12,6 +13,7 @@ import { fullName } from "@/lib/utils";
 import { cancelAppointmentAction, completeAppointmentAction } from "../application/mentoring.actions";
 import type { MentorAppointmentRow } from "../application/mentor-portal.queries";
 import { APPOINTMENT_STATUS_LABELS, canCancel, canComplete } from "../domain/appointment-policy";
+import { appointmentCalendarEvent, appointmentIcsHref } from "../domain/calendar-event";
 import { ConfirmActionButton } from "@/components/ui/confirm-action-button";
 
 const STATUS_VARIANT = { CONFIRMED: "brand", COMPLETED: "success", CANCELLED: "outline" } as const;
@@ -84,6 +86,12 @@ export function MentorAppointmentCard({ appointment: a }: { appointment: MentorA
                 <Video aria-hidden /> Görüşmeye katıl
               </a>
             </Button>
+          ) : null}
+          {a.status === "CONFIRMED" && a.startTime > new Date() ? (
+            <AddToCalendar
+              event={appointmentCalendarEvent({ id: a.id, startTime: a.startTime, endTime: a.endTime, meetingLink: a.meetingLink, withName: fullName(student) })}
+              icsHref={appointmentIcsHref(a.id)}
+            />
           ) : null}
           <Button asChild size="sm" variant="outline">
             <a href={`mailto:${student.email}`}>

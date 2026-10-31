@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Plus } from "lucide-react";
@@ -22,8 +22,10 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { createAssignmentAction } from "../application/assignment.actions";
 import type { InstructorCourseOption } from "../application/instructor-assignments.queries";
+import { FILE_TYPE_OPTIONS } from "../domain/file-policy";
 import { assignmentInputSchema } from "../domain/schemas";
 
 /** The form edits a local datetime string; it is converted to an ISO instant on submit. */
@@ -38,13 +40,14 @@ export function CreateAssignmentDialog({ courses }: { courses: InstructorCourseO
   const [pending, startTransition] = useTransition();
   const {
     register,
+    control,
     handleSubmit,
     reset,
     setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { courseId: courses[0]?.id ?? "", title: "", description: "", dueDate: "", maxScore: 100 },
+    defaultValues: { courseId: courses[0]?.id ?? "", title: "", description: "", dueDate: "", maxScore: 100, acceptedFileTypes: [] },
   });
 
   const onSubmit = handleSubmit((values) => {
@@ -123,6 +126,37 @@ export function CreateAssignmentDialog({ courses }: { courses: InstructorCourseO
               />
             </FormField>
           </div>
+          <Controller
+            control={control}
+            name="acceptedFileTypes"
+            render={({ field }) => (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="text-sm font-medium">Kabul edilen dosya türleri</legend>
+                <p className="text-xs text-muted-foreground">
+                  {field.value.length === 0 ? "Hiçbiri seçilmezse desteklenen tüm türler kabul edilir." : `${field.value.length} tür seçildi.`}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {FILE_TYPE_OPTIONS.map((type) => {
+                    const selected = field.value.includes(type);
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => field.onChange(selected ? field.value.filter((t) => t !== type) : [...field.value, type])}
+                        className={cn(
+                          "h-7 rounded-full border px-2.5 font-mono text-xs uppercase outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
+                          selected ? "border-brand/60 bg-brand/10 text-foreground" : "border-border text-muted-foreground hover:bg-accent",
+                        )}
+                      >
+                        {type}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
+          />
           <DialogFooter className="mt-2">
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={pending}>

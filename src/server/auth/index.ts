@@ -2,6 +2,7 @@ import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "@/server/db";
+import { recordAudit } from "@/server/audit";
 import { loginSchema, portalSchema } from "@/modules/identity/domain/credentials";
 import { canUsePortal } from "@/modules/identity/domain/role";
 import { authConfig } from "./auth.config";
@@ -58,26 +59,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         if (!user) {
           authLog("user not found", { email });
+          await recordAudit({ action: "auth.login_failed", actorEmail: email, metadata: { reason: "unknown_email", portal: portal.data } });
           return null;
         }
         if (!user.passwordHash) {
           authLog("user has no password hash", { email });
+          await recordAudit({ action: "auth.login_failed", actorId: user.id, actorEmail: email, metadata: { reason: "no_password", portal: portal.data } });
           return null;
         }
 
         const valid = await bcrypt.compare(credentials.data.password, user.passwordHash);
+        const failed = (reason: string) =>
+          recordAudit({ action: "auth.login_failed", actorId: user.id, actorEmail: email, metadata: { reason, portal: portal.data } });
         if (!valid) {
           authLog("password mismatch", { email, bcrypt: false });
+          await failed("wrong_password");
           return null;
         }
         if (!user.isActive) {
           authLog("inactive account", { email });
+          await failed("inactive_account");
           throw new InactiveAccountError();
         }
         if (!canUsePortal(user.role, portal.data)) {
           authLog("portal mismatch", { email, role: user.role, portal: portal.data });
+          await failed("portal_mismatch");
           throw new PortalMismatchError();
         }
+        await recordAudit({ action: "auth.login_success", actorId: user.id, actorEmail: email, metadata: { portal: portal.data } });
 
         return { id: user.id, email: user.email, name: `${user.name} ${user.surname}`, role: user.role, sessionVersion: user.sessionVersion };
       },

@@ -2,6 +2,7 @@ const LOCALE = "tr-TR";
 const TIME_ZONE = "Europe/Istanbul";
 
 const dateFormatter = new Intl.DateTimeFormat(LOCALE, { timeZone: TIME_ZONE, day: "numeric", month: "long" });
+const fullDateFormatter = new Intl.DateTimeFormat(LOCALE, { timeZone: TIME_ZONE, day: "numeric", month: "long", year: "numeric" });
 const dateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
   timeZone: TIME_ZONE,
   day: "numeric",
@@ -35,6 +36,8 @@ export function relativeDayLabel(date: Date, now: Date = new Date()): string {
 export const formatTimeRange = (start: Date, end: Date) => `${formatTime(start)} - ${formatTime(end)}`;
 
 export const formatDate = (date: Date) => dateFormatter.format(date);
+/** "31 Ekim 2026" — for documents that outlive the current year (certificates). */
+export const formatFullDate = (date: Date) => fullDateFormatter.format(date);
 export const formatDateTime = (date: Date) => dateTimeFormatter.format(date);
 export const formatTime = (date: Date) => timeFormatter.format(date);
 

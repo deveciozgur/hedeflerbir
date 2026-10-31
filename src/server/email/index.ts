@@ -43,3 +43,6 @@ export async function sendEmail({ to, subject, react }: EmailMessage): Promise<v
 
 /** Absolute URL for links inside e-mails. */
 export const appUrl = (path: string) => new URL(path, appBaseUrl()).toString();
+
+/** Whether e-mails actually leave the server (a real RESEND_API_KEY is set). */
+export const emailDeliveryConfigured = () => configured(process.env.RESEND_API_KEY);

@@ -51,3 +51,38 @@ export function FeedbackCard({ instructorName, status, grade, maxScore, feedback
     </Card>
   );
 }
+
+interface ReviewRound {
+  id: string;
+  decision: "GRADED" | "RETURNED";
+  score: number | null;
+  comment: string;
+  reviewerName: string | null;
+  createdAt: Date;
+}
+
+/** Earlier review rounds (the latest one is shown by FeedbackCard). */
+export function ReviewHistory({ reviews, maxScore }: { reviews: ReviewRound[]; maxScore: number }) {
+  if (reviews.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Önceki değerlendirmeler</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ol className="flex flex-col gap-4 border-l border-border pl-4">
+          {reviews.map((review) => (
+            <li key={review.id} className="relative flex flex-col gap-1.5">
+              <span className="absolute top-1.5 -left-[1.3rem] size-2 rounded-full bg-border-strong" aria-hidden />
+              <p className="text-xs text-muted-foreground">
+                {review.decision === "RETURNED" ? "Revizyon istendi" : `Puan ${review.score ?? "-"}/${maxScore}`}
+                {review.reviewerName ? ` · ${review.reviewerName}` : null} · {formatDateTime(review.createdAt)}
+              </p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-pretty">{review.comment}</p>
+            </li>
+          ))}
+        </ol>
+      </CardContent>
+    </Card>
+  );
+}

@@ -4,23 +4,25 @@ import { useId, useState, type DragEvent } from "react";
 import { FileUp, Paperclip, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ACCEPT_ATTRIBUTE, formatBytes, validateSubmissionFile } from "../domain/file-policy";
+import { acceptAttribute, allowedExtensions, formatBytes, validateSubmissionFile } from "../domain/file-policy";
 
 interface FileDropzoneProps {
   file: File | null;
   onFileChange: (file: File | null) => void;
   disabled?: boolean;
+  /** Assignment.acceptedFileTypes; empty = every supported type. */
+  acceptedFileTypes?: string[];
 }
 
 /** Drag-and-drop + click/keyboard file picker. Validates with the same domain policy as the server. */
-export function FileDropzone({ file, onFileChange, disabled }: FileDropzoneProps) {
+export function FileDropzone({ file, onFileChange, disabled, acceptedFileTypes = [] }: FileDropzoneProps) {
   const inputId = useId();
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const accept = (candidate: File | undefined) => {
     if (!candidate) return;
-    const problem = validateSubmissionFile(candidate);
+    const problem = validateSubmissionFile(candidate, acceptedFileTypes);
     setError(problem);
     onFileChange(problem ? null : candidate);
   };
@@ -79,11 +81,15 @@ export function FileDropzone({ file, onFileChange, disabled }: FileDropzoneProps
           <FileUp className="size-5" />
         </span>
         <span className="text-sm font-medium">{dragging ? "Bırak, yükleyelim" : "Dosyayı sürükle bırak veya seç"}</span>
-        <span className="text-xs text-subtle">PDF, ZIP, Office veya görsel, en fazla 20 MB</span>
+        <span className="text-xs text-subtle">
+          {acceptedFileTypes.length > 0
+            ? `${allowedExtensions(acceptedFileTypes).map((e) => e.slice(1).toUpperCase()).join(", ")}, en fazla 20 MB`
+            : "PDF, ZIP, Office veya görsel, en fazla 20 MB"}
+        </span>
         <input
           id={inputId}
           type="file"
-          accept={ACCEPT_ATTRIBUTE}
+          accept={acceptAttribute(acceptedFileTypes)}
           className="sr-only"
           disabled={disabled}
           aria-invalid={Boolean(error)}

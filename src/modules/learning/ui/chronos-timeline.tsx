@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarCheck, CalendarClock, ClipboardCheck, Radio, type LucideIcon } from "lucide-react";
+import { CalendarCheck, CalendarClock, CalendarPlus, ClipboardCheck, Radio, type LucideIcon } from "lucide-react";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -69,7 +69,7 @@ export function ChronosTimeline({ items }: { items: AgendaItem[] }) {
                     const status = agendaStatus(item, now);
                     const last = index === day.items.length - 1;
                     return (
-                      <li key={`${item.kind}-${item.id}`} className="relative grid grid-cols-[32px_1fr] gap-3">
+                      <li key={`${item.kind}-${item.id}`} className="relative grid grid-cols-[32px_1fr_auto] gap-3">
                         {/* Rail: node + connector to the next entry of the same day */}
                         <div className="relative flex justify-center" aria-hidden>
                           {!last ? <span className="absolute top-9 bottom-0 w-px bg-border" /> : null}
@@ -102,6 +102,19 @@ export function ChronosTimeline({ items }: { items: AgendaItem[] }) {
                             <Badge variant={STATUS_BADGE[status]}>{AGENDA_STATUS_LABELS[status]}</Badge>
                           </span>
                         </Link>
+                        {item.kind === "assignment" ? (
+                          <span />
+                        ) : (
+                          <a
+                            href={`/api/calendar/${item.kind}/${item.id}`}
+                            download
+                            aria-label={`${item.title} takvime ekle (.ics)`}
+                            title="Takvime ekle (.ics)"
+                            className="mt-2 grid size-8 place-items-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                          >
+                            <CalendarPlus className="size-4" aria-hidden />
+                          </a>
+                        )}
                       </li>
                     );
                   })}

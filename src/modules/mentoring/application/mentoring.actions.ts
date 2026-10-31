@@ -10,7 +10,9 @@ import { awardBadgesSafely } from "@/modules/engagement/application/badges.servi
 import { formatDateTime } from "@/lib/format";
 import { canBook, canCancel, canComplete } from "../domain/appointment-policy";
 import { generateSlots, partitionConflicts, validateWindow } from "../domain/availability";
-import { appointmentIdSchema, availabilityInputSchema, bookingInputSchema } from "../domain/schemas";
+import { appointmentIdSchema, availabilityInputSchema, bookingInputSchema, weeklyAvailabilitySchema } from "../domain/schemas";
+import { cellsToRanges } from "../domain/weekly-template";
+import { syncTemplateSlots } from "./weekly-availability.service";
 import { sendAppointmentBookedEmails, sendAppointmentCancelledEmail } from "./appointment-emails";
 
 const partySelect = { name: true, surname: true, email: true } as const;
@@ -54,6 +56,25 @@ export async function addAvailabilityAction(input: unknown): Promise<ActionResul
 
   revalidateMentoring();
   return ok({ created: count, skipped: skipped + (accepted.length - count) });
+}
+
+/** Replaces the weekly template and regenerates the rolling window of slots from it. */
+export async function saveWeeklyAvailabilityAction(input: unknown): Promise<ActionResult<{ created: number; removed: number }>> {
+  const mentor = await requireRole("MENTOR");
+  const parsed = weeklyAvailabilitySchema.safeParse(input);
+  if (!parsed.success) return fail("Geçersiz haftalık plan.");
+
+  const ranges = cellsToRanges(parsed.data.cells);
+  await db.$transaction([
+    db.mentorAvailability.deleteMany({ where: { mentorId: mentor.id } }),
+    db.mentorAvailability.createMany({
+      data: ranges.map((r) => ({ mentorId: mentor.id, ...r, slotDurationMinutes: parsed.data.slotMinutes })),
+    }),
+  ]);
+  const result = await syncTemplateSlots(mentor.id, { prune: true });
+
+  revalidateMentoring();
+  return ok(result);
 }
 
 export async function removeSlotAction(slotId: unknown): Promise<ActionResult> {

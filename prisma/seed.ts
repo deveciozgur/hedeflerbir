@@ -3,6 +3,8 @@ import { dirname, join, resolve } from "node:path";
 import { PrismaClient, Role, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { DEMO_ACCOUNTS, demoPassword } from "../src/modules/identity/domain/demo-accounts";
+import { partitionConflicts } from "../src/modules/mentoring/domain/availability";
+import { cellsToRanges, materializeTemplate } from "../src/modules/mentoring/domain/weekly-template";
 
 /**
  * Idempotent demo seed: run it any number of times (`npx prisma db seed`).
@@ -113,7 +115,7 @@ async function seedCourse(instructorId: string, studentId: string) {
       description: "App Router, Server Components, Server Actions ve production deployment ile uçtan uca modern web geliştirme.",
       instructorId,
     },
-    update: { instructorId },
+    update: { instructorId, status: "PUBLISHED", level: "INTERMEDIATE" },
     select: { id: true, slug: true },
   });
 
@@ -234,6 +236,129 @@ async function seedMentoring(mentorId: string, studentId: string) {
   }
 }
 
+const ARTICLE_MARKDOWN = `## Server Components neden önemli?
+
+Next.js 15'te bileşenler **varsayılan olarak sunucuda** çalışır. Bu sayede:
+
+- Veritabanına doğrudan erişirsin, API katmanına gerek kalmaz.
+- Tarayıcıya giden JavaScript miktarı azalır.
+- Hassas anahtarlar sunucuda kalır.
+
+### Ne zaman \`"use client"\`?
+
+Yalnızca etkileşim (state, efekt, tarayıcı API'leri) gerektiğinde. Etkileşimli parçayı **küçük bir yaprak bileşene** ayır.
+
+\`\`\`tsx
+export default async function Page() {
+  const courses = await db.course.findMany();
+  return <CourseList courses={courses} />;
+}
+\`\`\`
+
+> İpucu: Önce sunucuda düşün, istemciye yalnızca gerektiğinde geç.
+`;
+
+/** Find-or-create by (parent, title) so re-runs update instead of duplicating. */
+async function upsertModule(courseId: string, title: string, orderIndex: number) {
+  const existing = await prisma.courseModule.findFirst({ where: { courseId, title }, select: { id: true } });
+  if (existing) return prisma.courseModule.update({ where: { id: existing.id }, data: { orderIndex }, select: { id: true } });
+  return prisma.courseModule.create({ data: { courseId, title, orderIndex }, select: { id: true } });
+}
+
+async function upsertLesson(moduleId: string, data: Omit<Prisma.LessonUncheckedCreateInput, "moduleId">) {
+  const existing = await prisma.lesson.findFirst({ where: { moduleId, title: data.title }, select: { id: true } });
+  if (existing) return prisma.lesson.update({ where: { id: existing.id }, data, select: { id: true } });
+  return prisma.lesson.create({ data: { ...data, moduleId }, select: { id: true } });
+}
+
+/** Module/lesson outline: video, article, quiz, assignment and live-session lessons. */
+async function seedCurriculum(courseId: string, assignmentId: string, studentId: string) {
+  const liveSession = await prisma.courseSession.findUniqueOrThrow({ where: { courseId_order: { courseId, order: 2 } }, select: { id: true } });
+
+  const basics = await upsertModule(courseId, "Temeller", 0);
+  const practice = await upsertModule(courseId, "Uygulama", 1);
+
+  const video = await upsertLesson(basics.id, {
+    title: "Kurs tanıtımı ve kurulum",
+    type: "VIDEO",
+    orderIndex: 0,
+    durationMinutes: 12,
+    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    content: "Bu derste geliştirme ortamını kuruyor ve kursun yol haritasını konuşuyoruz.",
+    resources: [{ title: "Next.js kurulum rehberi", url: "https://nextjs.org/docs/app/getting-started/installation", type: "link" }],
+  });
+  await upsertLesson(basics.id, { title: "Server Components'e giriş", type: "ARTICLE", orderIndex: 1, durationMinutes: 10, content: ARTICLE_MARKDOWN });
+
+  const quizLesson = await upsertLesson(practice.id, { title: "Bölüm sonu quizi", type: "QUIZ", orderIndex: 0, durationMinutes: 10 });
+  const assignmentLesson = await upsertLesson(practice.id, { title: "Proje mimarisi ödevi", type: "ASSIGNMENT", orderIndex: 1, assignmentId });
+  await upsertLesson(practice.id, { title: "Canlı ders: Server Actions", type: "LIVE_SESSION", orderIndex: 2, durationMinutes: 90, sessionId: liveSession.id });
+
+  const quiz = await prisma.quiz.upsert({
+    where: { lessonId: quizLesson.id },
+    create: { lessonId: quizLesson.id, passingScore: 70, timeLimitMinutes: 10, retriesAllowed: 2 },
+    update: { passingScore: 70, timeLimitMinutes: 10, retriesAllowed: 2 },
+    select: { id: true, _count: { select: { questions: true } } },
+  });
+  // Questions are created once; instructors may have edited them since.
+  if (quiz._count.questions === 0) {
+    const questions = [
+      {
+        prompt: "Next.js 15 App Router'da bir bileşen varsayılan olarak nerede çalışır?",
+        type: "MULTIPLE_CHOICE" as const,
+        explanation: "Bileşenler varsayılan olarak Server Component'tir.",
+        options: [
+          { text: "Sunucuda", isCorrect: true },
+          { text: "Yalnızca tarayıcıda", isCorrect: false },
+          { text: "Service Worker içinde", isCorrect: false },
+        ],
+      },
+      {
+        prompt: "Hangileri Server Component'te doğrudan yapılabilir?",
+        type: "MULTIPLE_SELECT" as const,
+        explanation: "useState ve onClick istemci tarafı özelliklerdir.",
+        options: [
+          { text: "Veritabanı sorgusu", isCorrect: true },
+          { text: "Ortam değişkeni okumak", isCorrect: true },
+          { text: "useState kullanmak", isCorrect: false },
+          { text: "onClick olayı bağlamak", isCorrect: false },
+        ],
+      },
+      { prompt: "Bir formu Server Action ile göndermenin avantajını kendi cümlelerinle açıkla.", type: "OPEN_ENDED" as const, explanation: null, options: [] },
+    ];
+    for (const [orderIndex, { options, ...question }] of questions.entries()) {
+      await prisma.quizQuestion.create({
+        data: { ...question, quizId: quiz.id, orderIndex, points: 1, options: { create: options.map((o, i) => ({ ...o, orderIndex: i })) } },
+      });
+    }
+  }
+
+  // The student has finished the intro video and already submitted the assignment.
+  for (const lessonId of [video.id, assignmentLesson.id]) {
+    await prisma.lessonProgress.upsert({
+      where: { userId_lessonId: { userId: studentId, lessonId } },
+      create: { userId: studentId, lessonId, isCompleted: true, completedAt: new Date(), lastWatchedSecond: lessonId === video.id ? 5 : 0 },
+      update: {},
+    });
+  }
+}
+
+/** Weekly template (Tue/Thu 18:00-21:00, 60 min) plus its generated slots for the next four weeks. */
+async function seedWeeklyAvailability(mentorId: string) {
+  const ranges = cellsToRanges([2, 4].flatMap((day) => [18, 19, 20].map((hour) => ({ day, hour }))));
+  await prisma.$transaction([
+    prisma.mentorAvailability.deleteMany({ where: { mentorId } }),
+    prisma.mentorAvailability.createMany({ data: ranges.map((r) => ({ ...r, mentorId, slotDurationMinutes: 60 })) }),
+  ]);
+
+  const wanted = materializeTemplate(ranges, 60);
+  const existing = await prisma.mentorSlot.findMany({ where: { mentorId, endTime: { gt: new Date() } }, select: { startTime: true, endTime: true } });
+  const { accepted } = partitionConflicts(wanted, existing.map((s) => ({ start: s.startTime, end: s.endTime })));
+  await prisma.mentorSlot.createMany({
+    data: accepted.map((s) => ({ mentorId, startTime: s.start, endTime: s.end, generated: true })),
+    skipDuplicates: true,
+  });
+}
+
 async function seedAnnouncement(authorId: string) {
   const title = "HedeflerBir LMS demo ortamına hoş geldiniz";
   if (await prisma.announcement.findFirst({ where: { title }, select: { id: true } })) return;
@@ -242,16 +367,27 @@ async function seedAnnouncement(authorId: string) {
   });
 }
 
+async function seedCourseAnnouncement(authorId: string, courseId: string) {
+  const title = "Canlı ders öncesi hazırlık";
+  if (await prisma.announcement.findFirst({ where: { title, courseId }, select: { id: true } })) return;
+  await prisma.announcement.create({
+    data: { authorId, courseId, title, priority: "HIGH", content: "Server Actions dersinden önce 'Server Components'e giriş' okumasını tamamlayın." },
+  });
+}
+
 async function main() {
   assertSafeEnvironment();
   const password = demoPassword();
   const users = await upsertUsers(await bcrypt.hash(password, 12));
 
-  const { assignmentId } = await seedCourse(users.INSTRUCTOR.id, users.STUDENT.id);
+  const { course, assignmentId } = await seedCourse(users.INSTRUCTOR.id, users.STUDENT.id);
   await seedSubmission(assignmentId, users.STUDENT.id);
+  await seedCurriculum(course.id, assignmentId, users.STUDENT.id);
   await seedProject(users.STUDENT.id);
   await seedMentoring(users.MENTOR.id, users.STUDENT.id);
+  await seedWeeklyAvailability(users.MENTOR.id);
   await seedAnnouncement(users.ADMIN.id);
+  await seedCourseAnnouncement(users.INSTRUCTOR.id, course.id);
 
   console.info("\nHedeflerBir demo hesapları hazır:");
   console.table(

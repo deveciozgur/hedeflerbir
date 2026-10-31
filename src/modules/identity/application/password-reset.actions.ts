@@ -6,6 +6,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "@/server/db";
 import { generateToken, hashToken } from "@/server/auth/tokens";
+import { recordAudit } from "@/server/audit";
 import { fail, ok, type ActionResult } from "@/lib/action-result";
 import {
   canRequestReset,
@@ -78,6 +79,7 @@ export async function resetPasswordAction(input: unknown): Promise<ActionResult>
     return true;
   });
   if (!consumed) return fail(TOKEN_STATE_MESSAGES.used);
+  await recordAudit({ action: "auth.password_reset", actorId: record.user.id, actorEmail: record.user.email });
 
   const loginPath = PORTAL_LOGIN_PATH[portalFor(record.user.role)];
   after(() => sendPasswordChangedEmail(record.user, loginPath).catch((e: unknown) => console.error("Password changed e-mail failed", e)));

@@ -88,6 +88,8 @@ export async function getStudentDashboard(studentId: string): Promise<StudentDas
       },
     }),
     db.announcement.findMany({
+      // Platform-wide announcements plus those of the student's own courses.
+      where: { OR: [{ courseId: null }, { course: { enrollments: { some: { studentId } } } }] },
       orderBy: [{ pinned: "desc" }, { publishedAt: "desc" }],
       take: 3,
       select: { id: true, title: true, content: true, pinned: true, publishedAt: true },

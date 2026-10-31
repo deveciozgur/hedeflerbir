@@ -30,6 +30,11 @@ export function activeUsersPerWeek(events: readonly ActivityEvent[], buckets: re
   });
 }
 
+/** Sum of a measure per bucket (e.g. watched seconds per week). */
+export function sumPerWeek(points: ReadonlyArray<{ at: Date; value: number }>, buckets: readonly WeekBucket[]): number[] {
+  return buckets.map((bucket) => points.reduce((sum, p) => (p.at > bucket.start && p.at <= bucket.end ? sum + p.value : sum), 0));
+}
+
 export const percentage = (part: number, whole: number): number | null =>
   whole > 0 ? Math.round((part / whole) * 100) : null;
 

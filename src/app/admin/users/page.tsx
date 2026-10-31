@@ -14,6 +14,7 @@ import { getViewer } from "@/modules/identity/application/viewer.queries";
 import { ROLE_LABELS, ROLES } from "@/modules/identity/domain/role";
 import { listUsers } from "@/modules/administration/application/user-admin.queries";
 import { CreateUserDialog } from "@/modules/administration/ui/create-user-dialog";
+import { ImportUsersDialog } from "@/modules/administration/ui/import-users-dialog";
 import { ActivationButton, RoleSelect } from "@/modules/administration/ui/user-row-controls";
 
 export const metadata: Metadata = { title: "Kullanıcılar" };
@@ -28,7 +29,12 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
       <PageHeader
         title="Kullanıcılar"
         description={`${total} hesap · ${ROLES.map((r) => `${counts[r]} ${ROLE_LABELS[r].toLocaleLowerCase("tr-TR")}`).join(" · ")}`}
-        actions={<CreateUserDialog />}
+        actions={
+          <div className="flex gap-2">
+            <ImportUsersDialog />
+            <CreateUserDialog />
+          </div>
+        }
       />
 
       <form role="search" className="flex flex-col gap-2 sm:flex-row" action="/admin/users">

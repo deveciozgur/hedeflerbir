@@ -5,6 +5,7 @@ import { getRecentNotifications } from "@/modules/notifications/application/noti
 import { NotificationBell } from "@/modules/notifications/ui/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Brand } from "./brand";
+import { CommandPalette } from "./command-palette";
 import { MobileNav } from "./mobile-nav";
 import { SidebarNav } from "./sidebar-nav";
 import { UserMenu } from "./user-menu";
@@ -37,6 +38,7 @@ export async function AppShell({ variant, viewer, children }: AppShellProps) {
           <MobileNav variant={variant} />
           <Brand subtitle={SHELL_LABEL[variant]} className="lg:hidden" />
           <div className="ml-auto flex items-center gap-1">
+            <CommandPalette variant={variant} />
             <ThemeToggle />
             <NotificationBell items={notifications} unreadCount={viewer.unreadNotifications} />
             <UserMenu

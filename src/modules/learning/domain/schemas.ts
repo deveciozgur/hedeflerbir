@@ -25,6 +25,12 @@ export const watchProgressSchema = z.object({
   durationSeconds: z.number().min(0).max(24 * 3600),
 });
 
+export const lessonProgressSchema = z.object({
+  lessonId: z.string().min(1),
+  positionSeconds: z.number().min(0).max(24 * 3600),
+  durationSeconds: z.number().min(0).max(24 * 3600),
+});
+
 export const attendanceInputSchema = z.object({
   sessionId: z.string().min(1),
   records: z.array(z.object({ studentId: z.string().min(1), status: z.enum(["PRESENT", "ABSENT", "EXCUSED"]) })).max(1000),

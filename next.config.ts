@@ -18,6 +18,11 @@ const nextConfig: NextConfig = {
   // PDF exports embed Geist (Turkish glyphs) from node_modules at runtime — make sure standalone ships it.
   outputFileTracingIncludes: {
     "/api/admin/exports": ["./node_modules/geist/dist/fonts/geist-sans/Geist-Regular.ttf", "./node_modules/geist/dist/fonts/geist-sans/Geist-SemiBold.ttf"],
+    "/api/certificates/[code]": [
+      "./node_modules/geist/dist/fonts/geist-sans/Geist-Regular.ttf",
+      "./node_modules/geist/dist/fonts/geist-sans/Geist-SemiBold.ttf",
+      "./public/logo.png",
+    ],
   },
   experimental: {
     optimizePackageImports: ["lucide-react", "radix-ui", "motion"],

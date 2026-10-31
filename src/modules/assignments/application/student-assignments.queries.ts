@@ -49,8 +49,11 @@ export interface StudentAssignmentDetail {
   description: string;
   dueDate: Date;
   maxScore: number;
+  acceptedFileTypes: string[];
   courseTitle: string;
   instructorName: string;
+  /** Every review round, newest first (Submission.feedback mirrors the latest). */
+  reviews: Array<{ id: string; decision: "GRADED" | "RETURNED"; score: number | null; comment: string; reviewerName: string | null; createdAt: Date }>;
   submission: {
     id: string;
     status: SubmissionStatus;
@@ -72,6 +75,7 @@ export async function getStudentAssignmentDetail(studentId: string, assignmentId
       description: true,
       dueDate: true,
       maxScore: true,
+      acceptedFileTypes: true,
       course: { select: { title: true, instructor: { select: { name: true, surname: true } } } },
       submissions: {
         where: { studentId },
@@ -85,6 +89,10 @@ export async function getStudentAssignmentDetail(studentId: string, assignmentId
           feedback: true,
           submittedAt: true,
           gradedAt: true,
+          reviews: {
+            orderBy: { createdAt: "desc" },
+            select: { id: true, decision: true, score: true, comment: true, createdAt: true, reviewer: { select: { name: true, surname: true } } },
+          },
         },
       },
     },
@@ -92,10 +100,25 @@ export async function getStudentAssignmentDetail(studentId: string, assignmentId
   if (!row) notFound();
 
   const { course, submissions, ...assignment } = row;
+  const latest = submissions[0] ?? null;
   return {
     ...assignment,
     courseTitle: course.title,
     instructorName: fullName(course.instructor),
-    submission: submissions[0] ?? null,
+    reviews: (latest?.reviews ?? []).map(({ reviewer, decision, ...review }) => ({
+      ...review,
+      decision: decision === "RETURNED" ? ("RETURNED" as const) : ("GRADED" as const),
+      reviewerName: reviewer ? fullName(reviewer) : null,
+    })),
+    submission: latest && {
+      id: latest.id,
+      status: latest.status,
+      fileName: latest.fileName,
+      note: latest.note,
+      grade: latest.grade,
+      feedback: latest.feedback,
+      submittedAt: latest.submittedAt,
+      gradedAt: latest.gradedAt,
+    },
   };
 }

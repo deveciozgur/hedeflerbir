@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { FILE_TYPE_OPTIONS } from "./file-policy";
 
 export const assignmentInputSchema = z.object({
   courseId: z.string().min(1, { error: "Bir eğitim seçin." }),
@@ -10,6 +11,8 @@ export const assignmentInputSchema = z.object({
     .int({ error: "Tam sayı girin." })
     .min(1, { error: "En az 1 olmalı." })
     .max(1000, { error: "En fazla 1000 olabilir." }),
+  /** Empty = every platform-supported file type. */
+  acceptedFileTypes: z.array(z.enum(FILE_TYPE_OPTIONS as [string, ...string[]])).max(FILE_TYPE_OPTIONS.length),
 });
 
 export type AssignmentInput = z.infer<typeof assignmentInputSchema>;

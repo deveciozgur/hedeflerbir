@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/server/db";
 import { fullName } from "@/lib/utils";
 import { courseCompletion, sessionState, type SessionState } from "../domain/curriculum";
+import { lessonCompletion } from "../domain/lessons";
 import { parseResources, type SessionResource } from "../domain/resources";
 
 const sessionTimingSelect = { id: true, scheduleDate: true, durationMinutes: true, recordingUrl: true } as const;
@@ -15,6 +16,7 @@ export interface StudentCourseCard {
   description: string;
   instructorName: string;
   sessionCount: number;
+  lessonCount: number;
   completion: number;
   nextSession: Date | null;
 }
@@ -22,7 +24,7 @@ export interface StudentCourseCard {
 export async function getStudentCourses(studentId: string): Promise<StudentCourseCard[]> {
   const now = new Date();
   const enrollments = await db.enrollment.findMany({
-    where: { studentId },
+    where: { studentId, course: { status: { not: "DRAFT" } } },
     orderBy: { enrolledAt: "desc" },
     select: {
       course: {
@@ -35,6 +37,7 @@ export async function getStudentCourses(studentId: string): Promise<StudentCours
             orderBy: { order: "asc" },
             select: { ...sessionTimingSelect, lessonViews: { where: { userId: studentId }, select: { positionSeconds: true, completed: true } } },
           },
+          modules: { select: { lessons: { select: { progress: { where: { userId: studentId }, select: { isCompleted: true } } } } } },
         },
       },
     },
@@ -42,13 +45,16 @@ export async function getStudentCourses(studentId: string): Promise<StudentCours
 
   return enrollments.map(({ course }) => {
     const states = course.sessions.map((s) => sessionState(s, watchOf(s.lessonViews), now));
+    const lessons = course.modules.flatMap((m) => m.lessons.map((l) => ({ isCompleted: l.progress[0]?.isCompleted ?? false })));
     return {
       slug: course.slug,
       title: course.title,
       description: course.description,
       instructorName: fullName(course.instructor),
       sessionCount: course.sessions.length,
-      completion: courseCompletion(states),
+      lessonCount: lessons.length,
+      // Lesson-based courses measure lesson completion; session-only courses measure watched recordings.
+      completion: lessons.length > 0 ? lessonCompletion(lessons) : courseCompletion(states),
       nextSession: course.sessions.find((s) => s.scheduleDate > now)?.scheduleDate ?? null,
     };
   });
@@ -81,7 +87,7 @@ export interface StudentCourseDetail {
 export async function getStudentCourse(studentId: string, slug: string): Promise<StudentCourseDetail> {
   const now = new Date();
   const course = await db.course.findFirst({
-    where: { slug, enrollments: { some: { studentId } } },
+    where: { slug, status: { not: "DRAFT" }, enrollments: { some: { studentId } } },
     select: {
       id: true,
       slug: true,

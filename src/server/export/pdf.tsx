@@ -1,19 +1,8 @@
 import "server-only";
-import { join } from "node:path";
-import { Document, Font, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
 import type { ExportTable } from "@/modules/administration/domain/export-datasets";
 import { formatCell } from "./cell-format";
-
-// The built-in PDF fonts lack Turkish glyphs (ş, ğ, ı, İ), so Geist is embedded from the package.
-const FONT_DIR = join(process.cwd(), "node_modules", "geist", "dist", "fonts", "geist-sans");
-Font.register({
-  family: "Geist",
-  fonts: [
-    { src: join(FONT_DIR, "Geist-Regular.ttf"), fontWeight: 400 },
-    { src: join(FONT_DIR, "Geist-SemiBold.ttf"), fontWeight: 600 },
-  ],
-});
-Font.registerHyphenationCallback((word) => [word]);
+import "./pdf-fonts";
 
 const c = { text: "#18181b", muted: "#71717a", border: "#e4e4e7", header: "#f4f4f5", brand: "#4f46e5" };
 

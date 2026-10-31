@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/server/db";
 import { parseSocialLinks } from "@/modules/identity/domain/profile";
 import { BOOKING_HORIZON_DAYS } from "../domain/availability";
+import { topUpTemplateSlots } from "./weekly-availability.service";
 
 const horizon = (now: Date) => new Date(now.getTime() + BOOKING_HORIZON_DAYS * 86_400_000);
 /** Every future slot in the booking window, booked or not; bookings expose only a flag, never who. */
@@ -75,6 +76,7 @@ function toModel(m: MentorRow): MentorProfileModel {
 
 /** Directory payload: everything the card and its booking modal need, so opening a mentor costs no round-trip. */
 export async function listMentors(): Promise<MentorProfileModel[]> {
+  await topUpTemplateSlots();
   const now = new Date();
   const mentors = await db.user.findMany({
     where: { role: "MENTOR", isActive: true },
@@ -85,6 +87,7 @@ export async function listMentors(): Promise<MentorProfileModel[]> {
 }
 
 export async function getMentorDetail(mentorId: string): Promise<MentorProfileModel> {
+  await topUpTemplateSlots([mentorId]);
   const mentor = await db.user.findFirst({
     where: { id: mentorId, role: "MENTOR", isActive: true },
     select: mentorSelect(new Date()),

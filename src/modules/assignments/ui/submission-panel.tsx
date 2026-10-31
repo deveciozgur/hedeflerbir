@@ -17,9 +17,10 @@ interface SubmissionPanelProps {
   assignmentId: string;
   submission: { id: string; status: SubmissionStatus; fileName: string | null; submittedAt: Date } | null;
   eligibility: SubmitEligibility;
+  acceptedFileTypes?: string[];
 }
 
-export function SubmissionPanel({ assignmentId, submission, eligibility }: SubmissionPanelProps) {
+export function SubmissionPanel({ assignmentId, submission, eligibility, acceptedFileTypes }: SubmissionPanelProps) {
   const [pending, startTransition] = useTransition();
   const [optimisticStatus, setOptimisticStatus] = useOptimistic(submission?.status ?? null);
   const [file, setFile] = useState<File | null>(null);
@@ -89,7 +90,7 @@ export function SubmissionPanel({ assignmentId, submission, eligibility }: Submi
               submit();
             }}
           >
-            <FileDropzone file={file} onFileChange={setFile} disabled={pending} />
+            <FileDropzone file={file} onFileChange={setFile} disabled={pending} acceptedFileTypes={acceptedFileTypes} />
             <div className="flex flex-col gap-2">
               <Label htmlFor="submission-note">Eğitmene not (isteğe bağlı)</Label>
               <Textarea

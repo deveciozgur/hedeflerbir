@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Video } from "lucide-react";
+import { AddToCalendar } from "@/components/ui/add-to-calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -10,6 +11,7 @@ import { fullName } from "@/lib/utils";
 import { cancelAppointmentAction } from "../application/mentoring.actions";
 import type { StudentAppointment } from "../application/mentor-directory.queries";
 import { canCancel, CANCELLATION_CUTOFF_HOURS } from "../domain/appointment-policy";
+import { appointmentCalendarEvent, appointmentIcsHref } from "../domain/calendar-event";
 import { ConfirmActionButton } from "@/components/ui/confirm-action-button";
 
 export function StudentAppointments({ appointments }: { appointments: StudentAppointment[] }) {
@@ -33,7 +35,11 @@ export function StudentAppointments({ appointments }: { appointments: StudentApp
                     </time>
                   </span>
                 </Link>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <AddToCalendar
+                    event={appointmentCalendarEvent({ id: a.id, startTime: a.startTime, endTime: a.endTime, meetingLink: a.meetingLink, withName: fullName(a.mentor) })}
+                    icsHref={appointmentIcsHref(a.id)}
+                  />
                   {a.meetingLink ? (
                     <Button asChild size="sm" variant="secondary">
                       <a href={a.meetingLink} target="_blank" rel="noopener noreferrer">

@@ -18,14 +18,14 @@ export function CourseCard({ course }: { course: StudentCourseCard }) {
       <div className="mt-auto flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
           <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">Kayıtlar</span>
+            <span className="text-muted-foreground">{course.lessonCount > 0 ? "İlerleme" : "Kayıtlar"}</span>
             <span className="tabular-nums">%{course.completion}</span>
           </div>
           <Progress value={course.completion} aria-label={`${course.title} izleme ilerlemesi`} />
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
-            <Layers className="size-3.5" aria-hidden /> {course.sessionCount} oturum
+            <Layers className="size-3.5" aria-hidden /> {course.lessonCount > 0 ? `${course.lessonCount} ders` : `${course.sessionCount} oturum`}
           </span>
           {course.nextSession ? (
             <span className="inline-flex items-center gap-1.5">

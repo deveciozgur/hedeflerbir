@@ -11,6 +11,7 @@ import { formatDateTime } from "@/lib/format";
 import { cn, fullName, initials } from "@/lib/utils";
 import { gradeSubmissionAction } from "../application/assignment.actions";
 import type { RosterEntry } from "../application/instructor-assignments.queries";
+import { previewOf } from "../domain/file-policy";
 import { canGrade } from "../domain/submission-status";
 import { GradingForm, type GradingFormSubmit } from "./grading-form";
 import { SubmissionStatusBadge } from "./status-badges";
@@ -25,6 +26,19 @@ function applyPatch(roster: RosterEntry[], patch: RosterPatch): RosterEntry[] {
           submission: { ...entry.submission, status: patch.decision, grade: patch.grade, feedback: patch.feedback },
         }
       : entry,
+  );
+}
+
+/** Inline preview for PDFs and images; other file types only offer the download button. */
+function SubmissionPreview({ submissionId, fileName }: { submissionId: string; fileName: string | null }) {
+  const preview = previewOf(fileName);
+  if (!preview) return null;
+  const src = `/api/files/submissions/${submissionId}?inline=1`;
+  return preview.kind === "pdf" ? (
+    <iframe src={src} title={`${fileName} önizleme`} className="h-[28rem] w-full rounded-lg border bg-white" />
+  ) : (
+    // eslint-disable-next-line @next/next/no-img-element -- authenticated per-user file; next/image can't optimize it
+    <img src={src} alt={`${fileName} önizlemesi`} className="max-h-[28rem] w-full rounded-lg border object-contain" />
   );
 }
 
@@ -119,6 +133,7 @@ export function GradingWorkspace({ maxScore, roster }: GradingWorkspaceProps) {
                       <span className="truncate">{selected.submission.fileName ?? "Teslim dosyası"}</span>
                     </a>
                   </Button>
+                  <SubmissionPreview submissionId={selected.submission.id} fileName={selected.submission.fileName} />
                   {selected.submission.note ? (
                     <div className="rounded-lg bg-muted/60 p-3">
                       <p className="mb-1 text-xs font-medium text-muted-foreground">Katılımcının notu</p>

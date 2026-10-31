@@ -57,9 +57,49 @@ enum NotificationType {
   APPOINTMENT_BOOKED
   APPOINTMENT_CANCELLED
   ASSIGNMENT_CREATED
+  ASSIGNMENT_DUE
   SUBMISSION_GRADED
+  CERTIFICATE_ISSUED
   NEW_MESSAGE
   SYSTEM
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+}
+
+enum LessonType {
+  VIDEO
+  ARTICLE
+  QUIZ
+  ASSIGNMENT
+  LIVE_SESSION
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  MULTIPLE_SELECT
+  OPEN_ENDED
+}
+
+enum AnnouncementPriority {
+  LOW
+  NORMAL
+  HIGH
 }
 
 // ─────────────────────────── Identity ────────────────────────────
@@ -96,6 +136,13 @@ model User {
   announcements         Announcement[]
   badges                UserBadge[]
   supportTickets        SupportTicket[]
+  lessonProgress        LessonProgress[]
+  quizAttempts          QuizAttempt[]
+  mentorAvailability    MentorAvailability[]
+  certificates          Certificate[]
+  feedbackGiven         AssignmentFeedback[]
+  learningActivity      LearningActivity[]
+  auditLogs             AuditLog[]
 
   @@index([role])
 }
@@ -133,21 +180,28 @@ model Profile {
 // ─────────────────────────── Learning ────────────────────────────
 
 model Course {
-  id           String   @id @default(cuid())
-  slug         String   @unique
+  id           String       @id @default(cuid())
+  slug         String       @unique
   title        String
-  description  String   @db.Text
+  description  String       @db.Text
   coverUrl     String?
+  level        CourseLevel  @default(BEGINNER)
+  /// Students only see PUBLISHED courses; ARCHIVED stays readable for enrolled students.
+  status       CourseStatus @default(PUBLISHED)
   instructorId String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
-  instructor  User            @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
-  sessions    CourseSession[]
-  assignments Assignment[]
-  enrollments Enrollment[]
+  instructor    User            @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
+  sessions      CourseSession[]
+  modules       CourseModule[]
+  assignments   Assignment[]
+  enrollments   Enrollment[]
+  certificates  Certificate[]
+  announcements Announcement[]
 
   @@index([instructorId])
+  @@index([status])
 }
 
 model CourseSession {
@@ -167,15 +221,18 @@ model CourseSession {
   course      Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
   attendances SessionAttendance[]
   lessonViews LessonView[]
+  lesson      Lesson?
 
   @@unique([courseId, order])
   @@index([scheduleDate])
 }
 
 model Enrollment {
-  studentId  String
-  courseId   String
-  enrolledAt DateTime @default(now())
+  studentId   String
+  courseId    String
+  status      EnrollmentStatus @default(ACTIVE)
+  enrolledAt  DateTime         @default(now())
+  completedAt DateTime?
 
   student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -211,6 +268,155 @@ model LessonView {
   @@index([userId, updatedAt])
 }
 
+/// Course outline: Course > CourseModule > Lesson. Lesson order is per module (orderIndex).
+model CourseModule {
+  id         String   @id @default(cuid())
+  courseId   String
+  title      String
+  orderIndex Int
+  createdAt  DateTime @default(now())
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@index([courseId, orderIndex])
+}
+
+model Lesson {
+  id              String     @id @default(cuid())
+  moduleId        String
+  title           String
+  type            LessonType
+  orderIndex      Int
+  durationMinutes Int?
+  /// Markdown body (ARTICLE) or notes shown under a video.
+  content         String?    @db.Text
+  videoUrl        String?
+  /// Array<{ title: string; url: string; type: "pdf" | "link" | "file" }>
+  resources       Json       @default("[]")
+  /// LIVE_SESSION lessons point at the scheduled session (meeting link, recording, attendance).
+  sessionId       String?    @unique
+  /// ASSIGNMENT lessons point at the course assignment.
+  assignmentId    String?    @unique
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  module     CourseModule     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  session    CourseSession?   @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  assignment Assignment?      @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  quiz       Quiz?
+  progress   LessonProgress[]
+
+  @@index([moduleId, orderIndex])
+}
+
+model LessonProgress {
+  userId            String
+  lessonId          String
+  isCompleted       Boolean   @default(false)
+  lastWatchedSecond Int       @default(0)
+  completedAt       DateTime?
+  updatedAt         DateTime  @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@id([userId, lessonId])
+  @@index([lessonId])
+}
+
+/// Seconds of video watched per user and calendar day (feeds weekly watch-time analytics).
+model LearningActivity {
+  userId  String
+  day     DateTime @db.Date
+  seconds Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day])
+  @@index([day])
+}
+
+model Certificate {
+  id               String   @id @default(cuid())
+  userId           String
+  courseId         String
+  /// Public verification code printed on the PDF (/verify/<code>).
+  verificationCode String   @unique
+  issuedAt         DateTime @default(now())
+  /// Optional pre-rendered copy; otherwise the PDF is rendered on demand.
+  pdfUrl           String?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+// ───────────────────────────── Quizzes ─────────────────────────────
+
+model Quiz {
+  id               String @id @default(cuid())
+  lessonId         String @unique
+  /// Percentage (0-100) needed to pass.
+  passingScore     Int    @default(70)
+  timeLimitMinutes Int?
+  /// Extra attempts after the first one.
+  retriesAllowed   Int    @default(2)
+
+  lesson    Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+}
+
+model QuizQuestion {
+  id          String       @id @default(cuid())
+  quizId      String
+  orderIndex  Int
+  prompt      String       @db.Text
+  type        QuestionType
+  /// Open-ended answers are collected for the instructor and not auto-scored.
+  points      Int          @default(1)
+  explanation String?      @db.Text
+
+  quiz    Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options QuizOption[]
+
+  @@index([quizId, orderIndex])
+}
+
+model QuizOption {
+  id         String  @id @default(cuid())
+  questionId String
+  orderIndex Int
+  text       String
+  isCorrect  Boolean @default(false)
+
+  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId, orderIndex])
+}
+
+model QuizAttempt {
+  id           String    @id @default(cuid())
+  quizId       String
+  userId       String
+  /// Percentage of auto-scored points, set when the attempt is submitted.
+  score        Int?
+  earnedPoints Int?
+  maxPoints    Int?
+  isPassed     Boolean   @default(false)
+  /// { [questionId]: string[] (option ids) | string (open-ended text) }
+  answers      Json      @default("{}")
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([quizId, userId])
+}
+
 model Project {
   id          String   @id @default(cuid())
   title       String
@@ -240,16 +446,19 @@ model StudentProjectProgress {
 // ────────────────────────── Assignments ──────────────────────────
 
 model Assignment {
-  id          String   @id @default(cuid())
-  courseId    String
-  title       String
-  description String   @db.Text
-  dueDate     DateTime
-  maxScore    Int      @default(100)
-  createdAt   DateTime @default(now())
+  id                String   @id @default(cuid())
+  courseId          String
+  title             String
+  description       String   @db.Text
+  dueDate           DateTime
+  maxScore          Int      @default(100)
+  /// Allowed file extensions, e.g. ["pdf", "zip"]. Empty = the platform default list.
+  acceptedFileTypes String[] @default([])
+  createdAt         DateTime @default(now())
 
   course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
   submissions Submission[]
+  lesson      Lesson?
 
   @@index([courseId, dueDate])
 }
@@ -267,14 +476,53 @@ model Submission {
   submittedAt  DateTime         @default(now())
   gradedAt     DateTime?
 
-  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignment Assignment           @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    User                 @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  reviews    AssignmentFeedback[]
 
   @@unique([assignmentId, studentId])
   @@index([studentId, status])
 }
 
+/// Every review round is kept, so the student sees the full feedback history.
+/// Submission.grade / feedback / status mirror the latest round.
+model AssignmentFeedback {
+  id             String           @id @default(cuid())
+  submissionId   String
+  reviewerId     String?
+  /// GRADED = accepted with a score, RETURNED = sent back for revision.
+  decision       SubmissionStatus
+  score          Int?
+  comment        String           @db.Text
+  /// Optional reviewer attachment (annotated file, voice note) in storage.
+  attachmentKey  String?
+  attachmentName String?
+  createdAt      DateTime         @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  reviewer   User?      @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([submissionId, createdAt])
+}
+
 // ─────────────────────────── Mentoring ───────────────────────────
+
+/// Weekly recurring availability; bookable MentorSlots are generated from it on a rolling window.
+/// Times are minutes from midnight in the platform time zone (Europe/Istanbul).
+model MentorAvailability {
+  id                  String   @id @default(cuid())
+  mentorId            String
+  /// ISO weekday: 1 = Monday ... 7 = Sunday
+  dayOfWeek           Int
+  startMinute         Int
+  endMinute           Int
+  slotDurationMinutes Int      @default(60)
+  createdAt           DateTime @default(now())
+
+  mentor User @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId, dayOfWeek])
+}
 
 model MentorSlot {
   id        String   @id @default(cuid())
@@ -283,6 +531,8 @@ model MentorSlot {
   endTime   DateTime
   /// true = not bookable: either reserved by a CONFIRMED appointment or closed by the mentor
   isBooked  Boolean  @default(false)
+  /// Created from the weekly MentorAvailability template (regenerated when the template changes).
+  generated Boolean  @default(false)
   createdAt DateTime @default(now())
 
   mentor       User          @relation(fields: [mentorId], references: [id], onDelete: Cascade)
@@ -366,16 +616,21 @@ model SupportTicket {
 // ────────────────────────── Engagement ───────────────────────────
 
 model Announcement {
-  id          String   @id @default(cuid())
+  id          String               @id @default(cuid())
   authorId    String
+  /// null = platform-wide; otherwise only that course's students see it.
+  courseId    String?
   title       String
-  content     String   @db.Text
-  pinned      Boolean  @default(false)
-  publishedAt DateTime @default(now())
+  content     String               @db.Text
+  priority    AnnouncementPriority @default(NORMAL)
+  pinned      Boolean              @default(false)
+  publishedAt DateTime             @default(now())
 
-  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  course Course? @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@index([publishedAt])
+  @@index([courseId, publishedAt])
 }
 
 model Badge {
@@ -398,4 +653,25 @@ model UserBadge {
   badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@id([userId, badgeId])
+}
+
+// ──────────────────────────── Auditing ────────────────────────────
+
+/// Append-only security trail: sign-ins, role changes, imports and deletions.
+model AuditLog {
+  id         String   @id @default(cuid())
+  /// null for anonymous events (e.g. a failed sign-in for an unknown e-mail).
+  actorId    String?
+  actorEmail String?
+  /// e.g. "auth.login_failed", "user.role_changed" (see modules/administration/domain/audit.ts)
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([action, createdAt])
 }

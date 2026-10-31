@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { after } from "next/server";
 import { PageHeader } from "@/components/ui/page-header";
+import { remindDueAssignments } from "@/modules/assignments/application/due-reminders.service";
 import { getViewer } from "@/modules/identity/application/viewer.queries";
 import { getStudentDashboard } from "@/modules/learning/application/student-dashboard.queries";
 import { AnnouncementsCard } from "@/modules/learning/ui/announcements-card";
@@ -12,6 +14,7 @@ export const metadata: Metadata = { title: "Ana Sayfa" };
 
 export default async function StudentDashboardPage() {
   const viewer = await getViewer("STUDENT");
+  after(() => remindDueAssignments(viewer.id).catch((error: unknown) => console.error("Due reminders failed", error)));
   const dashboard = await getStudentDashboard(viewer.id);
 
   return (

@@ -1,10 +1,14 @@
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "@/server/db";
 import { requireRole } from "@/server/auth/guards";
+import { recordAudit } from "@/server/audit";
+import { emailDeliveryConfigured } from "@/server/email";
+import { createInviteLink, sendAccountInviteEmail } from "@/modules/identity/application/account-invite.service";
 import { fail, ok, type ActionResult } from "@/lib/action-result";
 import type { Role } from "@/modules/identity/domain/role";
 import {
@@ -15,6 +19,7 @@ import {
   generateTemporaryPassword,
   roleChangeSchema,
 } from "../domain/user-admin";
+import { parseUserCsv } from "../domain/user-import";
 
 const activeAdminCount = () => db.user.count({ where: { role: "ADMIN", isActive: true } });
 
@@ -36,7 +41,7 @@ async function roleDependencyError(userId: string, from: Role): Promise<string |
 }
 
 export async function createUserAction(input: unknown): Promise<ActionResult<{ temporaryPassword: string }>> {
-  await requireRole("ADMIN");
+  const admin = await requireRole("ADMIN");
   const parsed = createUserSchema.safeParse(input);
   if (!parsed.success) return fail("Lütfen alanları kontrol edin.", z.flattenError(parsed.error).fieldErrors);
 
@@ -45,8 +50,16 @@ export async function createUserAction(input: unknown): Promise<ActionResult<{ t
   }
 
   const temporaryPassword = generateTemporaryPassword();
-  await db.user.create({
+  const created = await db.user.create({
     data: { ...parsed.data, passwordHash: await bcrypt.hash(temporaryPassword, 12), profile: { create: {} } },
+    select: { id: true },
+  });
+  await recordAudit({
+    action: "user.created",
+    actorId: admin.id,
+    targetType: "user",
+    targetId: created.id,
+    metadata: { email: parsed.data.email, role: parsed.data.role },
   });
 
   revalidatePath("/admin/users");
@@ -68,6 +81,7 @@ export async function changeRoleAction(input: unknown): Promise<ActionResult> {
   if (dependency) return fail(dependency);
 
   await db.user.update({ where: { id: target.id }, data: { role: parsed.data.role } });
+  await recordAudit({ action: "user.role_changed", actorId: admin.id, targetType: "user", targetId: target.id, metadata: { from: target.role, to: parsed.data.role } });
   revalidatePath("/admin/users");
   return ok(undefined);
 }
@@ -85,6 +99,55 @@ export async function setUserActiveAction(input: unknown): Promise<ActionResult>
 
   // Suspended users are signed out on their next request: getViewer() redirects inactive accounts to /logout.
   await db.user.update({ where: { id: target.id }, data: { isActive: parsed.data.active } });
+  await recordAudit({ action: parsed.data.active ? "user.activated" : "user.deactivated", actorId: admin.id, targetType: "user", targetId: target.id });
   revalidatePath("/admin/users");
   return ok(undefined);
+}
+
+export interface ImportUsersResult {
+  created: number;
+  /** E-mails already registered; never overwritten. */
+  skippedExisting: string[];
+  errors: Array<{ line: number; message: string }>;
+  /** Only when e-mail delivery is not configured: links the admin must share manually. */
+  inviteLinks: Array<{ email: string; link: string }>;
+}
+
+/** CSV bulk import. New accounts have no password; each gets a one-time "set your password" invitation. */
+export async function importUsersAction(csvText: unknown): Promise<ActionResult<ImportUsersResult>> {
+  const admin = await requireRole("ADMIN");
+  if (typeof csvText !== "string" || csvText.length > 1_000_000) return fail("CSV dosyası okunamadı (en fazla 1 MB).");
+
+  const { rows, errors, missingColumns } = parseUserCsv(csvText);
+  if (missingColumns.length > 0) return fail(`CSV başlığında eksik sütun: ${missingColumns.join(", ")}.`);
+  if (rows.length === 0) return fail(errors[0] ? `Geçerli satır yok. Satır ${errors[0].line}: ${errors[0].message}` : "CSV dosyasında kullanıcı bulunamadı.");
+
+  const existing = await db.user.findMany({ where: { email: { in: rows.map((r) => r.email) } }, select: { email: true } });
+  const taken = new Set(existing.map((u) => u.email));
+  const fresh = rows.filter((r) => !taken.has(r.email));
+
+  const created = await db.$transaction(
+    fresh.map((row) =>
+      db.user.create({
+        data: { name: row.name, surname: row.surname, email: row.email, role: row.role, profile: { create: {} } },
+        select: { id: true, name: true, email: true },
+      }),
+    ),
+  );
+
+  const delivering = emailDeliveryConfigured();
+  const inviteLinks: ImportUsersResult["inviteLinks"] = [];
+  for (const user of created) {
+    const link = await createInviteLink(user);
+    if (delivering) after(() => sendAccountInviteEmail(user, link).catch((e: unknown) => console.error("Invite e-mail failed", e)));
+    else inviteLinks.push({ email: user.email, link });
+  }
+
+  await recordAudit({
+    action: "user.imported",
+    actorId: admin.id,
+    metadata: { created: created.length, skippedExisting: taken.size, invalidRows: errors.length },
+  });
+  revalidatePath("/admin/users");
+  return ok({ created: created.length, skippedExisting: [...taken], errors, inviteLinks });
 }

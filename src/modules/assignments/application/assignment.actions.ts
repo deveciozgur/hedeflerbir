@@ -8,6 +8,7 @@ import { requireRole } from "@/server/auth/guards";
 import { getStorage } from "@/server/storage";
 import { fail, ok, type ActionResult } from "@/lib/action-result";
 import { awardBadgesSafely } from "@/modules/engagement/application/badges.service";
+import { completeAssignmentLesson } from "@/modules/learning/application/course-completion.service";
 import { sanitizeFileName, validateSubmissionFile } from "../domain/file-policy";
 import { assignmentInputSchema, gradeInputSchema, submissionNoteSchema } from "../domain/schemas";
 import { canGrade, canSubmit, type SubmissionStatus } from "../domain/submission-status";
@@ -23,18 +24,19 @@ export async function submitAssignmentAction(formData: FormData): Promise<Action
   if (typeof assignmentId !== "string" || !(file instanceof File)) return fail("Lütfen bir dosya seçin.");
   if (!note.success) return fail(note.error.issues[0]?.message ?? "Not geçersiz.");
 
-  const fileError = validateSubmissionFile(file);
-  if (fileError) return fail(fileError);
-
   const assignment = await db.assignment.findFirst({
     where: { id: assignmentId, course: { enrollments: { some: { studentId: student.id } } } },
     select: {
       id: true,
       dueDate: true,
+      acceptedFileTypes: true,
       submissions: { where: { studentId: student.id }, select: { status: true, fileUrl: true }, take: 1 },
     },
   });
   if (!assignment) return fail("Ödev bulunamadı.");
+
+  const fileError = validateSubmissionFile(file, assignment.acceptedFileTypes);
+  if (fileError) return fail(fileError);
 
   const previous = assignment.submissions[0] ?? null;
   const eligibility = canSubmit(assignment, previous?.status ?? null);
@@ -65,7 +67,10 @@ export async function submitAssignmentAction(formData: FormData): Promise<Action
   }
 
   after(() => awardBadgesSafely([student.id]));
+  // An ASSIGNMENT lesson linked to this assignment completes on submission.
+  await completeAssignmentLesson(student.id, assignment.id);
   revalidatePath("/assignments", "layout");
+  revalidatePath("/courses", "layout");
   revalidatePath("/dashboard");
   return ok({ status: "SUBMITTED" });
 }
@@ -95,6 +100,7 @@ export async function createAssignmentAction(input: unknown): Promise<ActionResu
         description: parsed.data.description,
         dueDate,
         maxScore: parsed.data.maxScore,
+        acceptedFileTypes: parsed.data.acceptedFileTypes,
       },
       select: { id: true, title: true },
     });
@@ -131,10 +137,15 @@ export async function gradeSubmissionAction(input: unknown): Promise<ActionResul
     return fail("Puan, ödevin maksimum puanını aşamaz.", { grade: [`En fazla ${submission.assignment.maxScore}.`] });
   }
 
+  const score = decision === "GRADED" ? grade : null;
   await db.$transaction([
     db.submission.update({
       where: { id: submission.id },
-      data: { status: decision, grade: decision === "GRADED" ? grade : null, feedback, gradedAt: new Date() },
+      data: { status: decision, grade: score, feedback, gradedAt: new Date() },
+    }),
+    // Kept per round so the student sees the whole review history, not just the latest note.
+    db.assignmentFeedback.create({
+      data: { submissionId: submission.id, reviewerId: instructor.id, decision, score, comment: feedback },
     }),
     db.notification.create({
       data: {

@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   MessagesSquare,
+  ShieldCheck,
   Sparkles,
   UserRound,
   Users,
@@ -90,6 +91,7 @@ export const NAVIGATION: Record<ShellVariant, NavSection[]> = {
         { title: "Kullanıcılar", href: "/admin/users", icon: Users },
         { title: "Eğitimler", href: "/admin/courses", icon: BookOpen },
         { title: "Veri Dışa Aktarma", href: "/admin/exports", icon: Download },
+        { title: "Denetim Kayıtları", href: "/admin/audit", icon: ShieldCheck },
       ],
     },
     {

@@ -6,7 +6,7 @@ import { formatDateTime } from "@/lib/format";
 import { getViewer } from "@/modules/identity/application/viewer.queries";
 import { getStudentAssignmentDetail } from "@/modules/assignments/application/student-assignments.queries";
 import { canSubmit } from "@/modules/assignments/domain/submission-status";
-import { FeedbackCard } from "@/modules/assignments/ui/feedback-card";
+import { FeedbackCard, ReviewHistory } from "@/modules/assignments/ui/feedback-card";
 import { DeadlineBadge } from "@/modules/assignments/ui/status-badges";
 import { SubmissionPanel } from "@/modules/assignments/ui/submission-panel";
 
@@ -68,7 +68,9 @@ export default async function AssignmentDetailPage({ params }: { params: Promise
             assignmentId={assignment.id}
             submission={submission}
             eligibility={canSubmit(assignment, status)}
+            acceptedFileTypes={assignment.acceptedFileTypes}
           />
+          <ReviewHistory reviews={assignment.reviews.slice(1)} maxScore={assignment.maxScore} />
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Award, CalendarCheck, ClipboardCheck, FolderKanban, PlayCircle } from "lucide-react";
+import { Award, BadgeCheck, CalendarCheck, ClipboardCheck, Download, FolderKanban, PlayCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -9,6 +10,7 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { formatDate } from "@/lib/format";
 import { fullName } from "@/lib/utils";
 import { BadgeGrid } from "@/modules/engagement/ui/badge-grid";
+import { getStudentCertificates } from "@/modules/learning/application/certificate.queries";
 import { getOwnProfile, getStudentProfileOverview } from "@/modules/identity/application/profile.queries";
 import { getViewer } from "@/modules/identity/application/viewer.queries";
 import { AvatarUploader } from "@/modules/identity/ui/avatar-uploader";
@@ -25,7 +27,11 @@ const STATUS = {
 
 export default async function StudentProfilePage() {
   const viewer = await getViewer("STUDENT");
-  const [profile, overview] = await Promise.all([getOwnProfile(viewer.id), getStudentProfileOverview(viewer.id)]);
+  const [profile, overview, certificates] = await Promise.all([
+    getOwnProfile(viewer.id),
+    getStudentProfileOverview(viewer.id),
+    getStudentCertificates(viewer.id),
+  ]);
   const { stats } = overview;
   const earned = overview.badges.filter((b) => b.awardedAt).length;
   const attendance = stats.attendance.counted ? Math.round((stats.attendance.present / stats.attendance.counted) * 100) : null;
@@ -85,6 +91,38 @@ export default async function StudentProfilePage() {
                   </li>
                 );
               })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>Sertifikalarım</CardTitle>
+            <CardDescription>Tamamladığın eğitimlerin doğrulanabilir sertifikaları</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {certificates.length === 0 ? (
+            <EmptyState icon={BadgeCheck} title="Henüz sertifikan yok" description="Bir eğitimin tüm derslerini tamamladığında sertifikan burada görünür." className="py-8" />
+          ) : (
+            <ul className="flex flex-col divide-y">
+              {certificates.map((certificate) => (
+                <li key={certificate.code} className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <h3 className="truncate text-sm font-medium">{certificate.courseTitle}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(certificate.issuedAt)} · <span className="font-mono">{certificate.code}</span>
+                    </p>
+                  </div>
+                  <Button asChild variant="outline" size="sm">
+                    <a href={`/api/certificates/${certificate.code}`} target="_blank" rel="noopener noreferrer">
+                      <Download aria-hidden /> PDF
+                    </a>
+                  </Button>
+                </li>
+              ))}
             </ul>
           )}
         </CardContent>

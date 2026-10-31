@@ -7,9 +7,11 @@ import { db } from "@/server/db";
 import { requireRole } from "@/server/auth/guards";
 import { fail, ok, type ActionResult } from "@/lib/action-result";
 import { awardBadgesSafely } from "@/modules/engagement/application/badges.service";
+import { COMPLETION_RULE } from "../domain/lessons";
 import { isWatched } from "../domain/recording";
 import { parseResourceLines } from "../domain/resources";
-import { attendanceInputSchema, sessionInputSchema, watchProgressSchema } from "../domain/schemas";
+import { attendanceInputSchema, lessonProgressSchema, sessionInputSchema, watchProgressSchema } from "../domain/schemas";
+import { completeLesson, recordWatchTime } from "./course-completion.service";
 
 // ───────────────────────────── Student: watch progress ─────────────────────────────
 
@@ -21,12 +23,13 @@ export async function saveWatchProgressAction(input: unknown): Promise<ActionRes
 
   const session = await db.courseSession.findFirst({
     where: { id: sessionId, recordingUrl: { not: null }, course: { enrollments: { some: { studentId: student.id } } } },
-    select: { id: true, lessonViews: { where: { userId: student.id }, select: { completed: true } } },
+    select: { id: true, lessonViews: { where: { userId: student.id }, select: { completed: true, positionSeconds: true } } },
   });
   if (!session) return fail("Ders kaydı bulunamadı.");
 
   // Completion is sticky — re-watching the intro must not un-finish a lesson.
   const wasCompleted = session.lessonViews[0]?.completed ?? false;
+  await recordWatchTime(student.id, positionSeconds - (session.lessonViews[0]?.positionSeconds ?? 0));
   const completed = wasCompleted || isWatched(positionSeconds, durationSeconds);
   const position = Math.floor(positionSeconds);
 
@@ -38,6 +41,66 @@ export async function saveWatchProgressAction(input: unknown): Promise<ActionRes
   if (completed && !wasCompleted) after(() => awardBadgesSafely([student.id]));
   // Intentionally no revalidatePath: refreshing the RSC tree every 15 s would disturb playback.
   return ok({ completed });
+}
+
+// ───────────────────────────── Student: lessons ─────────────────────────────
+
+/** Lesson the student may access: in an enrolled, non-draft course. */
+const enrolledLessonWhere = (lessonId: string, studentId: string) => ({
+  id: lessonId,
+  module: { course: { status: { not: "DRAFT" as const }, enrollments: { some: { studentId } } } },
+});
+
+const revalidatePlayer = (slug: string) => {
+  revalidatePath(`/courses/${slug}`);
+  revalidatePath("/courses");
+  revalidatePath("/dashboard");
+};
+
+export async function saveLessonProgressAction(input: unknown): Promise<ActionResult<{ completed: boolean; certificateCode: string | null }>> {
+  const student = await requireRole("STUDENT");
+  const parsed = lessonProgressSchema.safeParse(input);
+  if (!parsed.success) return fail("Geçersiz ilerleme verisi.");
+  const { lessonId, positionSeconds, durationSeconds } = parsed.data;
+
+  const lesson = await db.lesson.findFirst({
+    where: { ...enrolledLessonWhere(lessonId, student.id), type: "VIDEO" },
+    select: { id: true, module: { select: { course: { select: { slug: true } } } }, progress: { where: { userId: student.id }, select: { isCompleted: true, lastWatchedSecond: true } } },
+  });
+  if (!lesson) return fail("Ders bulunamadı.");
+
+  const previous = lesson.progress[0];
+  const position = Math.floor(positionSeconds);
+  await recordWatchTime(student.id, position - (previous?.lastWatchedSecond ?? 0));
+  await db.lessonProgress.upsert({
+    where: { userId_lessonId: { userId: student.id, lessonId } },
+    create: { userId: student.id, lessonId, lastWatchedSecond: position },
+    update: { lastWatchedSecond: position },
+  });
+
+  if (previous?.isCompleted || !isWatched(positionSeconds, durationSeconds)) return ok({ completed: previous?.isCompleted ?? false, certificateCode: null });
+  const result = await completeLesson(student.id, lessonId);
+  after(() => awardBadgesSafely([student.id]));
+  revalidatePlayer(lesson.module.course.slug);
+  return ok({ completed: true, certificateCode: result.certificateCode });
+}
+
+/** For lessons without an automatic signal (articles, live sessions) or embedded videos we can't track. */
+export async function markLessonCompleteAction(lessonId: unknown): Promise<ActionResult<{ certificateCode: string | null }>> {
+  const student = await requireRole("STUDENT");
+  const lesson = await db.lesson.findFirst({
+    where: enrolledLessonWhere(String(lessonId), student.id),
+    select: { id: true, type: true, module: { select: { course: { select: { slug: true } } } } },
+  });
+  if (!lesson) return fail("Ders bulunamadı.");
+  const rule = COMPLETION_RULE[lesson.type];
+  if (rule === "quizPassed" || rule === "submitted") {
+    return fail(rule === "quizPassed" ? "Quiz geçildiğinde ders otomatik tamamlanır." : "Ödev teslim edildiğinde ders otomatik tamamlanır.");
+  }
+
+  const result = await completeLesson(student.id, lesson.id);
+  revalidatePlayer(lesson.module.course.slug);
+  return ok({ certificateCode: result.certificateCode });
 }
 
 // ───────────────────────────── Instructor: sessions ─────────────────────────────
