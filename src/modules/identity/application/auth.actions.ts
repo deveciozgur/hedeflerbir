@@ -35,7 +35,10 @@ export async function loginAction(portal: Portal, input: unknown, callbackUrl?: 
     await signIn("credentials", { ...parsed.data, portal, redirect: false });
   } catch (error) {
     if (error instanceof CredentialsSignin) return fail(ERROR_MESSAGES[error.code] ?? ERROR_MESSAGES.default!);
-    if (error instanceof AuthError) return fail("Giriş sırasında bir sorun oluştu. Lütfen tekrar deneyin.");
+    if (error instanceof AuthError) {
+      console.error("[auth] signIn failed", { type: error.type, email: parsed.data.email, portal });
+      return fail("Giriş sırasında bir sorun oluştu. Lütfen tekrar deneyin.");
+    }
     throw error;
   }
 

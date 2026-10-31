@@ -12,6 +12,7 @@ export const authConfig = {
   providers: [],
   callbacks: {
     jwt({ token, user }) {
+      if (user && !(user.id && isRole(user.role))) console.error("[auth] jwt: signed-in user has no id/role", { id: user.id, role: user.role });
       if (user?.id && isRole(user.role)) {
         token.id = user.id;
         token.role = user.role;
