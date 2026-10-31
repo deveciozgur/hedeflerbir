@@ -18,6 +18,10 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
+    "db:status:prod": "dotenv -e .env.hostinger.local --no-expand -- prisma migrate status",
+    "db:deploy:prod": "dotenv -e .env.hostinger.local --no-expand -- prisma migrate deploy",
+    "db:seed:prod": "dotenv -e .env.hostinger.local --no-expand -v SEED_ALLOW_PRODUCTION=true -- prisma db seed",
+    "preflight": "prisma validate && npm run typecheck && npm run lint && npm run build",
     "postinstall": "prisma generate && patch-package"
   },
   "prisma": {
@@ -68,6 +72,7 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
+    "dotenv-cli": "^8.0.0",
     "eslint": "^9.36.0",
     "eslint-config-next": "^15.5.4",
     "tailwindcss": "^4.1.13",

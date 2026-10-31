@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { PrismaClient, Role, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { DEMO_ACCOUNTS, demoPassword } from "../src/modules/identity/domain/demo-accounts";
+import { DEFAULT_DEMO_PASSWORD, DEMO_ACCOUNTS, demoPassword } from "../src/modules/identity/domain/demo-accounts";
 import { partitionConflicts } from "../src/modules/mentoring/domain/availability";
 import { cellsToRanges, materializeTemplate } from "../src/modules/mentoring/domain/weekly-template";
 
@@ -397,7 +397,8 @@ async function main() {
         Rol: a.role,
         "Ad Soyad": `${user.name} ${user.surname}`,
         "E-posta": a.email,
-        Şifre: password,
+        // A custom SEED_PASSWORD is a real secret (production): never echo it into logs.
+        Şifre: password === DEFAULT_DEMO_PASSWORD ? password : "SEED_PASSWORD",
         "Giriş sayfası": a.portal === "expert" ? "/expert-login" : "/login",
       };
     }),

@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|Write|MultiEdit|NotebookEdit|Grep|Bash|PowerShell",
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-secrets.mjs\"" }]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": ["Read(./.env.hostinger.local)", "Edit(./.env.hostinger.local)", "Write(./.env.hostinger.local)"]
+  }
+}

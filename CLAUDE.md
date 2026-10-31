@@ -10,9 +10,25 @@ npm run lint         # eslint . (must stay at 0 warnings)
 npm run typecheck    # tsc --noEmit
 npm run build        # prisma generate && next build
 npx prisma db seed   # idempotent demo seed (see Seed)
+npm run preflight    # prisma validate + typecheck + lint + build: run before every commit
+
+# Production (Supabase), reading .env.hostinger.local through dotenv-cli (--no-expand)
+npm run db:status:prod
+npm run db:deploy:prod
+npm run db:seed:prod   # resets the live demo passwords; only on explicit request
 ```
 
-No test suite: verify with typecheck + lint + build, then exercise the flow in the browser with the demo accounts.
+No test suite: verify with `npm run preflight`, then exercise the flow in the browser with the demo accounts.
+
+Slash commands in `.claude/commands/`: `/preflight` (release checklist), `/db-sync <name> [--prod]` (schema change → migration with RLS → local → optional Supabase), `/seed-lms [--prod]`.
+
+## Guardrails
+
+- **Secrets**: `.env.hostinger.local` holds production credentials (Supabase password, `AUTH_SECRET`, `SEED_PASSWORD`). Never read, print, grep, copy or edit it; a PreToolUse hook (`.claude/hooks/protect-secrets.mjs`) and permission deny rules block it. Use the `:prod` npm scripts, which load it without echoing. Mask connection strings (`//user:***@host`) in any output. `.env`, `.env.*.local` stay git-ignored; never commit env values or paste them into code, docs or chat.
+- **Production database**: no destructive SQL (`DROP`, `TRUNCATE`, mass `DELETE`) and no `prisma db push` / `migrate reset` against Supabase. Schema changes go through a migration file (`/db-sync`). `db:deploy:prod` and `db:seed:prod` only after the user confirms in chat.
+- **Live site**: never type production passwords into app.hedeflerbir.com; verify live with unauthenticated probes and leave logged-in checks to the user.
+- **Deploys** are the user's action in hPanel; never push to `main` without being asked.
+- **Auth**: keep `requireRole` + ownership checks in every action, the `sessionVersion` revocation in `guards.ts`, and the portal split (`/login` for STUDENT/ADMIN, `/expert-login` for INSTRUCTOR/MENTOR). Never log passwords or tokens; login diagnostics log reasons only.
 
 ## Architecture
 

@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ROLE_LABELS } from "@/modules/identity/domain/role";
 import { importUsersAction, type ImportUsersResult } from "../application/user-admin.actions";
-import { IMPORT_TEMPLATE, MAX_IMPORT_ROWS, parseUserCsv, type ImportParseResult } from "../domain/user-import";
+import { cn } from "@/lib/utils";
+import { IMPORT_TEMPLATE_PATH, MAX_IMPORT_ROWS, parseUserCsv, type ImportParseResult } from "../domain/user-import";
 
 function downloadText(fileName: string, content: string) {
   const url = URL.createObjectURL(new Blob(["﻿" + content], { type: "text/csv;charset=utf-8" }));
@@ -24,6 +25,7 @@ export function ImportUsersDialog() {
   const [fileName, setFileName] = useState("");
   const [preview, setPreview] = useState<ImportParseResult | null>(null);
   const [result, setResult] = useState<ImportUsersResult | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const reset = () => {
@@ -35,6 +37,10 @@ export function ImportUsersDialog() {
 
   const readFile = async (file: File | undefined) => {
     if (!file) return;
+    if (!/\.csv$/i.test(file.name)) {
+      toast.error("Yalnızca .csv dosyası yükleyebilirsin.");
+      return;
+    }
     if (file.size > 1_000_000) {
       toast.error("Dosya 1 MB'tan büyük olamaz.");
       return;
@@ -75,7 +81,7 @@ export function ImportUsersDialog() {
         <DialogHeader>
           <DialogTitle>Toplu kullanıcı içe aktarma</DialogTitle>
           <DialogDescription>
-            Sütunlar: ad, soyad, e-posta ve isteğe bağlı rol (öğrenci, eğitmen, mentor, yönetici). En fazla {MAX_IMPORT_ROWS} satır. Yeni hesaplara şifre belirleme davetiyesi gönderilir.
+            Sütunlar: ad, soyad, e-posta, isteğe bağlı rol (öğrenci, eğitmen, mentor, yönetici) ve şifre. En fazla {MAX_IMPORT_ROWS} satır. Şifresi verilmeyen hesaplara şifre belirleme davetiyesi gönderilir.
           </DialogDescription>
         </DialogHeader>
 
@@ -85,6 +91,7 @@ export function ImportUsersDialog() {
               <CheckCircle2 className="size-5 text-success" aria-hidden />
               <p className="text-sm">
                 <span className="font-semibold">{result.created}</span> hesap oluşturuldu
+                {result.withPassword ? ` (${result.withPassword} tanesi CSV'deki şifreyle)` : ""}
                 {result.skippedExisting.length ? `, ${result.skippedExisting.length} e-posta zaten kayıtlı olduğu için atlandı` : ""}
                 {result.errors.length ? `, ${result.errors.length} satır hatalı` : ""}.
               </p>
@@ -108,14 +115,31 @@ export function ImportUsersDialog() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-border-strong px-6 py-8 text-center transition-colors hover:bg-accent/40 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+            <label
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragging(false);
+                void readFile(e.dataTransfer.files[0]);
+              }}
+              className={cn(
+                "flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-8 text-center transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                dragging ? "border-brand/60 bg-brand/5" : "border-border-strong hover:bg-accent/40",
+              )}
+            >
               <FileSpreadsheet className="size-6 text-muted-foreground" aria-hidden />
-              <span className="text-sm font-medium">{fileName || "CSV dosyası seç"}</span>
+              <span className="text-sm font-medium">{fileName || "CSV dosyasını sürükle bırak veya seç"}</span>
               <span className="text-xs text-subtle">UTF-8, virgül veya noktalı virgül ayraçlı</span>
               <input type="file" accept=".csv,text/csv" className="sr-only" onChange={(e) => void readFile(e.target.files?.[0])} />
             </label>
-            <Button variant="link" size="sm" className="self-start" onClick={() => downloadText("kullanici-sablonu.csv", IMPORT_TEMPLATE)}>
-              Örnek şablonu indir
+            <Button asChild variant="link" size="sm" className="self-start">
+              <a href={IMPORT_TEMPLATE_PATH} download>
+                Örnek şablonu indir
+              </a>
             </Button>
 
             {preview ? (

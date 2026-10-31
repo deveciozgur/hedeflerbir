@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { requireRole } from "@/server/auth/guards";
 import { recordAudit } from "@/server/audit";
@@ -19,7 +20,7 @@ import {
   generateTemporaryPassword,
   roleChangeSchema,
 } from "../domain/user-admin";
-import { parseUserCsv } from "../domain/user-import";
+import { IMPORT_CHUNK_SIZE, parseUserCsv, type ImportRow } from "../domain/user-import";
 
 const activeAdminCount = () => db.user.count({ where: { role: "ADMIN", isActive: true } });
 
@@ -111,6 +112,17 @@ export interface ImportUsersResult {
   errors: Array<{ line: number; message: string }>;
   /** Only when e-mail delivery is not configured: links the admin must share manually. */
   inviteLinks: Array<{ email: string; link: string }>;
+  /** Accounts created with the password from the CSV (no invitation needed). */
+  withPassword: number;
+}
+
+/** Creates one account; rows with a CSV password get it bcrypt-hashed, the rest are invited. */
+async function createImportedUser(row: ImportRow) {
+  const passwordHash = row.password ? await bcrypt.hash(row.password, 12) : null;
+  return db.user.create({
+    data: { name: row.name, surname: row.surname, email: row.email, role: row.role, passwordHash, profile: { create: {} } },
+    select: { id: true, name: true, email: true, passwordHash: true },
+  });
 }
 
 /** CSV bulk import. New accounts have no password; each gets a one-time "set your password" invitation. */
@@ -126,18 +138,27 @@ export async function importUsersAction(csvText: unknown): Promise<ActionResult<
   const taken = new Set(existing.map((u) => u.email));
   const fresh = rows.filter((r) => !taken.has(r.email));
 
-  const created = await db.$transaction(
-    fresh.map((row) =>
-      db.user.create({
-        data: { name: row.name, surname: row.surname, email: row.email, role: row.role, profile: { create: {} } },
-        select: { id: true, name: true, email: true },
-      }),
-    ),
-  );
+  // Chunked, row-isolated writes: a row that fails (e.g. the e-mail was registered meanwhile) is reported
+  // with its line number while the rest of its chunk still goes through.
+  const created: Array<{ id: string; name: string; email: string; passwordHash: string | null }> = [];
+  const rowErrors = [...errors];
+  for (let i = 0; i < fresh.length; i += IMPORT_CHUNK_SIZE) {
+    const chunk = fresh.slice(i, i + IMPORT_CHUNK_SIZE);
+    const results = await Promise.allSettled(chunk.map(createImportedUser));
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled") created.push(result.value);
+      else {
+        const unique = result.reason instanceof Prisma.PrismaClientKnownRequestError && result.reason.code === "P2002";
+        rowErrors.push({ line: chunk[index]!.line, message: unique ? "Bu e-posta ile kayıtlı bir kullanıcı var" : "Kayıt oluşturulamadı" });
+        if (!unique) console.error("[import] row failed", { line: chunk[index]!.line, error: result.reason instanceof Error ? result.reason.message : result.reason });
+      }
+    });
+  }
+  rowErrors.sort((a, b) => a.line - b.line);
 
   const delivering = emailDeliveryConfigured();
   const inviteLinks: ImportUsersResult["inviteLinks"] = [];
-  for (const user of created) {
+  for (const user of created.filter((u) => !u.passwordHash)) {
     const link = await createInviteLink(user);
     if (delivering) after(() => sendAccountInviteEmail(user, link).catch((e: unknown) => console.error("Invite e-mail failed", e)));
     else inviteLinks.push({ email: user.email, link });
@@ -146,8 +167,14 @@ export async function importUsersAction(csvText: unknown): Promise<ActionResult<
   await recordAudit({
     action: "user.imported",
     actorId: admin.id,
-    metadata: { created: created.length, skippedExisting: taken.size, invalidRows: errors.length },
+    metadata: { created: created.length, skippedExisting: taken.size, invalidRows: rowErrors.length },
   });
   revalidatePath("/admin/users");
-  return ok({ created: created.length, skippedExisting: [...taken], errors, inviteLinks });
+  return ok({
+    created: created.length,
+    skippedExisting: [...taken],
+    errors: rowErrors,
+    inviteLinks,
+    withPassword: created.filter((u) => u.passwordHash).length,
+  });
 }
