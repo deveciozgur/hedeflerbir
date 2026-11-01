@@ -22,6 +22,8 @@ No test suite: verify with `npm run preflight`, then exercise the flow in the br
 
 Slash commands in `.claude/commands/`: `/preflight` (release checklist), `/db-sync <name> [--prod]` (schema change → migration with RLS → local → optional Supabase), `/seed-lms [--prod]`.
 
+Project skill: `.claude/skills/ui-ux-pro-max/` (UI UX Pro Max v2.15.0, only that skill from its repo; the repo's other skills are not installed). Its search scripts run with `python .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" --domain <ux|style|color|...>`; on this machine `python3` is the Windows Store stub, so SKILL.md uses `python`. Treat its output as suggestions: this file's conventions (tokens, brand palette, `components/ui` primitives, lucide icons, Turkish copy) win over its defaults. Re-apply the `python` edit if the skill is ever updated.
+
 ## Guardrails
 
 - **Secrets**: `.env.hostinger.local` holds production credentials (Supabase password, `AUTH_SECRET`, `SEED_PASSWORD`). Never read, print, grep, copy or edit it; a PreToolUse hook (`.claude/hooks/protect-secrets.mjs`) and permission deny rules block it. Use the `:prod` npm scripts, which load it without echoing. Mask connection strings (`//user:***@host`) in any output. `.env`, `.env.*.local` stay git-ignored; never commit env values or paste them into code, docs or chat.
