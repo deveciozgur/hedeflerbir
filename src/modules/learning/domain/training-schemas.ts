@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 export const trainingInputSchema = z.object({
-  courseId: z.string().min(1, { error: "Bir program seçin." }),
   title: z.string().trim().min(3, { error: "Başlık en az 3 karakter olmalı." }).max(160),
   instructorId: z.string().min(1, { error: "Bir eğitmen seçin." }),
   topics: z.string().trim().max(5000),

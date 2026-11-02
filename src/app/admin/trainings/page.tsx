@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { getViewer } from "@/modules/identity/application/viewer.queries";
 import { deleteTrainingAction } from "@/modules/learning/application/training-admin.actions";
-import { getAdminTrainings, listProgramOptions } from "@/modules/learning/application/trainings.queries";
+import { getAdminTrainings } from "@/modules/learning/application/trainings.queries";
 import { trainingTiming } from "@/modules/learning/domain/trainings";
 import { AttendanceDialog } from "@/modules/learning/ui/attendance-dialog";
 import { TrainingCard } from "@/modules/learning/ui/training-card";
@@ -18,12 +18,8 @@ export const metadata: Metadata = { title: "Eğitimler" };
 
 export default async function AdminTrainingsPage() {
   await getViewer("ADMIN");
-  const [trainings, instructors, courses] = await Promise.all([
-    getAdminTrainings(),
-    listPeople("INSTRUCTOR"),
-    listProgramOptions(),
-  ]);
-  const options = { courses, instructors };
+  const [trainings, instructors] = await Promise.all([getAdminTrainings(), listPeople("INSTRUCTOR")]);
+  const options = { instructors };
 
   return (
     <div className="flex flex-col gap-10">
@@ -34,7 +30,7 @@ export default async function AdminTrainingsPage() {
           <TrainingFormDialog
             {...options}
             trigger={
-              <Button disabled={courses.length === 0}>
+              <Button disabled={instructors.length === 0}>
                 <Plus aria-hidden /> Yeni eğitim
               </Button>
             }
@@ -43,7 +39,7 @@ export default async function AdminTrainingsPage() {
       />
 
       {trainings.length === 0 ? (
-        <EmptyState icon={CalendarDays} title="Henüz eğitim yok" description={courses.length === 0 ? "Önce Programlar sayfasından bir program oluşturun." : "İlk canlı eğitimi ekleyerek takvimi oluştur."} />
+        <EmptyState icon={CalendarDays} title="Henüz eğitim yok" description={instructors.length === 0 ? "Önce Kullanıcılar sayfasından bir eğitmen hesabı oluşturun." : "İlk canlı eğitimi ekleyerek takvimi oluştur."} />
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {trainings.map((training) => {

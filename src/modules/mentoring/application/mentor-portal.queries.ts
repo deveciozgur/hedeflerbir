@@ -58,11 +58,15 @@ export interface MentorAppointmentRow {
   startTime: Date;
   endTime: Date;
   notes: string | null;
+  /** Admin-only fields; mentor views leave them out. */
+  adminNotes: string | null;
+  meetingLink: string | null;
   mentorName: string;
   team: TeamBrief;
 }
 
-export type AppointmentPhase = "upcoming" | "past";
+/** "pending" = defined by an admin, awaiting "Onayla" (admin only). Mentor and team views never include it. */
+export type AppointmentPhase = "pending" | "upcoming" | "past";
 
 const memberSelect = { id: true, name: true, surname: true, avatarUrl: true, profile: { select: { department: true } } } as const;
 
@@ -75,15 +79,19 @@ export async function listAppointments(phase: AppointmentPhase, mentorId?: strin
   const byMentor = mentorId ? { mentorId } : {};
   const rows = await db.appointment.findMany({
     where:
-      phase === "upcoming"
-        ? { ...byMentor, status: "CONFIRMED", slot: { endTime: { gt: now } } }
-        : { ...byMentor, OR: [{ status: { not: "CONFIRMED" } }, { slot: { endTime: { lte: now } } }] },
-    orderBy: { slot: { startTime: phase === "upcoming" ? "asc" : "desc" } },
+      phase === "pending"
+        ? { ...byMentor, status: "PENDING" }
+        : phase === "upcoming"
+          ? { ...byMentor, status: "CONFIRMED", slot: { endTime: { gt: now } } }
+          : { ...byMentor, status: { not: "PENDING" }, OR: [{ status: { not: "CONFIRMED" } }, { slot: { endTime: { lte: now } } }] },
+    orderBy: { slot: { startTime: phase === "past" ? "desc" : "asc" } },
     take: phase === "past" ? 50 : undefined,
     select: {
       id: true,
       status: true,
       notes: true,
+      adminNotes: true,
+      meetingLink: true,
       slot: { select: { startTime: true, endTime: true } },
       mentor: { select: { name: true, surname: true } },
       student: { select: { email: true, ...memberSelect } },
@@ -96,8 +104,10 @@ export async function listAppointments(phase: AppointmentPhase, mentorId?: strin
     department: profile?.department ?? null,
   });
 
-  return rows.map(({ slot, student, team, mentor, ...appointment }) => ({
+  return rows.map(({ slot, student, team, mentor, adminNotes, meetingLink, ...appointment }) => ({
     ...appointment,
+    adminNotes: mentorId ? null : adminNotes,
+    meetingLink: mentorId ? null : meetingLink,
     mentorName: `${mentor.name} ${mentor.surname}`,
     startTime: slot.startTime,
     endTime: slot.endTime,

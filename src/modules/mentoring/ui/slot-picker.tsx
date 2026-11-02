@@ -83,7 +83,7 @@ export function SlotPicker({ mentorName, slots, booking }: SlotPickerProps) {
       setNotes("");
       setMeetingLink("");
       setConfirmed({ slot, team: team?.name ?? "" });
-      toast.success("Seans planlandı", { description: "Mentor ve takım üyeleri bilgilendirildi." });
+      toast.success("Seans tanımlandı", { description: "Onay bekleyen seanslardan onayladığında mentor ve ekip görecek." });
     });
   };
 
@@ -163,16 +163,16 @@ export function SlotPicker({ mentorName, slots, booking }: SlotPickerProps) {
             );
           })}
         </div>
-        {!booking ? <p className="text-xs text-muted-foreground">Mentorluk seansları program yönetimi tarafından takımına planlanır.</p> : null}
+        {!booking ? <p className="text-xs text-muted-foreground">Mentorluk seansları program yönetimi tarafından ekibine planlanır.</p> : null}
       </div>
 
       {booking ? (
         <div className="flex flex-col gap-4 border-t border-border pt-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="booking-team">Takım</Label>
+              <Label htmlFor="booking-team">Ekip</Label>
               <NativeSelect id="booking-team" value={teamId} onChange={(e) => setTeamId(e.target.value)} disabled={pending}>
-                {booking.teams.length === 0 ? <option value="">Önce takım oluşturun</option> : null}
+                {booking.teams.length === 0 ? <option value="">Önce ekip oluşturun</option> : null}
                 {booking.teams.map((team) => (
                   <option key={team.id} value={team.id}>
                     {team.name}
@@ -187,7 +187,7 @@ export function SlotPicker({ mentorName, slots, booking }: SlotPickerProps) {
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="booking-notes">Talep notu</Label>
-            <Textarea id="booking-notes" rows={2} value={notes} maxLength={1000} onChange={(e) => setNotes(e.target.value)} placeholder="Takımın görüşmek istediği konular" disabled={pending} />
+            <Textarea id="booking-notes" rows={2} value={notes} maxLength={1000} onChange={(e) => setNotes(e.target.value)} placeholder="Ekibin görüşmek istediği konular" disabled={pending} />
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground" aria-live="polite">

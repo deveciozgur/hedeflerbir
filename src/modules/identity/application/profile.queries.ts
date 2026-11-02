@@ -15,6 +15,7 @@ export interface OwnProfile {
   createdAt: Date;
   bio: string;
   goals: string;
+  school: string;
   department: string;
   city: string;
   title: string;
@@ -34,7 +35,7 @@ export async function getOwnProfile(userId: string): Promise<OwnProfile> {
       role: true,
       avatarUrl: true,
       createdAt: true,
-      profile: { select: { bio: true, goals: true, department: true, city: true, title: true, expertiseArea: true, meetingUrl: true, socialLinks: true } },
+      profile: { select: { bio: true, goals: true, school: true, department: true, city: true, title: true, expertiseArea: true, meetingUrl: true, socialLinks: true } },
     },
   });
   if (!user) notFound();
@@ -47,6 +48,7 @@ export async function getOwnProfile(userId: string): Promise<OwnProfile> {
     ...rest,
     bio: profile?.bio ?? "",
     goals: profile?.goals ?? "",
+    school: profile?.school ?? "",
     department: profile?.department ?? "",
     city: profile?.city ?? "",
     title: profile?.title ?? "",

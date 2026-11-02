@@ -1,22 +1,36 @@
 import type { Role } from "@/modules/identity/domain/role";
 
-/** What a person card and its detail modal show. Fields are optional per context (a teammate sees less than an admin). */
+/**
+ * What a person card and its detail modal show. The card itself is name + photo only; the modal
+ * shows school, department and "Hakkımda" (plus title/expertise for experts).
+ */
 export interface PersonSummary {
   id: string;
   name: string;
   surname: string;
   avatarUrl: string | null;
   role: Role;
-  /** Okuduğu bölüm (participants) */
+  /** Okuduğu okul / bölüm (participants) */
+  school: string | null;
   department: string | null;
-  city: string | null;
   /** "Hakkımda" (Profile.bio) */
   about: string | null;
   /** Experts: job title and comma/dot separated expertise. */
   title: string | null;
   expertiseArea: string | null;
-  team: { name: string; focusArea: string | null } | null;
 }
+
+/** Everything a participant entered on their profile: the admin's full view. */
+export interface PersonRecord extends PersonSummary {
+  email: string;
+  city: string | null;
+  goals: string | null;
+  socialLinks: Record<string, string>;
+  team: { name: string; focusArea: string | null } | null;
+  isRepresentative: boolean;
+}
+
+export const SOCIAL_LABELS: Record<string, string> = { linkedin: "LinkedIn", github: "GitHub", x: "X", website: "Web sitesi" };
 
 /** Brand accents for initials placeholders, picked deterministically so a person keeps their colour. */
 const AVATAR_TONES = ["bg-brand/15 text-brand-soft", "bg-magenta/15 text-magenta", "bg-cyan/20 text-foreground", "bg-amber/25 text-foreground"] as const;

@@ -15,7 +15,7 @@ export function StudentAppointments({ appointments }: { appointments: StudentApp
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Takımının yaklaşan seansları</CardTitle>
+        <CardTitle>Ekibinin yaklaşan seansları</CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="flex flex-col divide-y">

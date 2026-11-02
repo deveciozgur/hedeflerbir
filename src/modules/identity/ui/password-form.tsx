@@ -53,7 +53,7 @@ export function PasswordForm() {
   );
 
   return (
-    <Card>
+    <Card id="sifre" className="scroll-mt-24">
       <CardHeader>
         <div>
           <CardTitle className="flex items-center gap-2">

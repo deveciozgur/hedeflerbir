@@ -39,6 +39,7 @@ const basics = {
 
 export const studentProfileSchema = z.object({
   ...basics,
+  school: z.string().trim().max(120, { error: "Okul en fazla 120 karakter olabilir." }),
   department: z.string().trim().max(120, { error: "Bölüm en fazla 120 karakter olabilir." }),
   city: z.string().trim().max(60, { error: "Şehir en fazla 60 karakter olabilir." }),
   goals: z.string().trim().max(1000, { error: "Hedefler en fazla 1000 karakter olabilir." }),

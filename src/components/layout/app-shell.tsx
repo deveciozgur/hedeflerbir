@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Brand } from "./brand";
 import { CommandPalette } from "./command-palette";
 import { MobileNav } from "./mobile-nav";
+import { PasswordReminder } from "./password-reminder";
 import { SidebarNav } from "./sidebar-nav";
 import { UserMenu } from "./user-menu";
 
@@ -55,6 +56,7 @@ export async function AppShell({ variant, viewer, children }: AppShellProps) {
         <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-12 lg:py-12">
           {children}
         </main>
+        {viewer.mustChangePassword ? <PasswordReminder userId={viewer.id} passwordHref={`${PROFILE_HREF[variant]}#sifre`} /> : null}
       </div>
     </div>
   );

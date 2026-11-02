@@ -11,6 +11,7 @@ import { loginAction } from "../application/auth.actions";
 import type { DemoCredential } from "../application/demo-login";
 import { loginSchema, type LoginInput } from "../domain/credentials";
 import type { Portal } from "../domain/role";
+import { KvkkDialogLink } from "./kvkk-notice";
 
 interface LoginFormProps {
   portal: Portal;
@@ -27,7 +28,7 @@ export function LoginForm({ portal, callbackUrl, demoAccounts = [] }: LoginFormP
     handleSubmit,
     setValue,
     formState: { errors },
-  } = useForm<LoginInput>({ resolver: zodResolver(loginSchema), defaultValues: { email: "", password: "" } });
+  } = useForm<LoginInput>({ resolver: zodResolver(loginSchema), defaultValues: { email: "", password: "", kvkkConsent: false } });
 
   const onSubmit = handleSubmit((values) => {
     setServerError(null);
@@ -77,6 +78,31 @@ export function LoginForm({ portal, callbackUrl, demoAccounts = [] }: LoginFormP
         {errors.password ? (
           <p id="password-error" className="text-xs text-destructive">
             {errors.password.message}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-start gap-2.5">
+          <input
+            id="kvkkConsent"
+            type="checkbox"
+            className="mt-0.5 size-4 shrink-0 accent-[var(--brand)]"
+            aria-invalid={Boolean(errors.kvkkConsent)}
+            aria-describedby={errors.kvkkConsent ? "kvkk-error" : undefined}
+            {...register("kvkkConsent")}
+          />
+          {/* The dialog trigger sits outside the <label> so opening the text doesn't toggle the box. */}
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            <KvkkDialogLink />{" "}
+            <label htmlFor="kvkkConsent" className="cursor-pointer">
+              metnini okudum; kişisel verilerimin bu metin kapsamında işlenmesine açık rıza veriyorum.
+            </label>
+          </p>
+        </div>
+        {errors.kvkkConsent ? (
+          <p id="kvkk-error" className="text-xs text-destructive">
+            {errors.kvkkConsent.message}
           </p>
         ) : null}
       </div>

@@ -13,6 +13,7 @@ import {
   Sparkles,
   UserRound,
   Users,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
 
@@ -44,6 +45,7 @@ export const NAVIGATION: Record<ShellVariant, NavSection[]> = {
       label: "Topluluk",
       items: [
         { title: "Ekibim", href: "/team", icon: Users },
+        { title: "Katılımcılar", href: "/participants", icon: UsersRound },
         { title: "Eğitmenler", href: "/instructors", icon: GraduationCap },
         { title: "Mentorlar", href: "/mentors", icon: Sparkles },
         { title: "Mesajlar", href: "/messages", icon: MessagesSquare },
@@ -90,9 +92,9 @@ export const NAVIGATION: Record<ShellVariant, NavSection[]> = {
         { title: "Ana Sayfa", href: "/admin", icon: LayoutDashboard, exact: true },
         { title: "Kullanıcılar", href: "/admin/users", icon: Users },
         { title: "Katılımcılar", href: "/admin/participants", icon: UserRound },
+        { title: "Ekipler", href: "/admin/teams", icon: UsersRound },
         { title: "Eğitimler", href: "/admin/trainings", icon: CalendarDays },
         { title: "Mentorlar", href: "/admin/mentors", icon: Sparkles },
-        { title: "Programlar", href: "/admin/courses", icon: BookOpen },
         { title: "Raporlar", href: "/admin/reports", icon: BarChart3 },
         { title: "Denetim Kayıtları", href: "/admin/audit", icon: ShieldCheck },
       ],

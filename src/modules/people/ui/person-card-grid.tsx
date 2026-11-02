@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, type ReactNode } from "react";
-import { Building2, Loader2, MapPin, Send, Users } from "lucide-react";
+import { Building2, GraduationCap, Link2, Loader2, Mail, MapPin, Send, Target, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn, fullName, initials, splitTags } from "@/lib/utils";
 import { ROLE_LABELS } from "@/modules/identity/domain/role";
 import { startThreadAction } from "@/modules/messaging/application/messaging.actions";
-import { avatarTone, type PersonSummary } from "../domain/person";
+import { avatarTone, SOCIAL_LABELS, type PersonRecord, type PersonSummary } from "../domain/person";
 
 export function PersonAvatar({ person, className }: { person: Pick<PersonSummary, "id" | "name" | "surname" | "avatarUrl">; className?: string }) {
   return (
@@ -67,18 +67,131 @@ function MessageForm({ person, onSent }: { person: PersonSummary; onSent: () => 
   );
 }
 
+function Fact({ icon: Icon, label, children }: { icon: typeof Building2; label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <div className="min-w-0">
+        <dt className="text-xs text-subtle">{label}</dt>
+        <dd className="break-words">{children}</dd>
+      </div>
+    </div>
+  );
+}
+
+function TextBlock({ title, text, empty }: { title: string; text: string | null; empty: string }) {
+  return (
+    <section aria-label={title} className="flex flex-col gap-1.5">
+      <h3 className="text-xs font-medium text-subtle">{title}</h3>
+      <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">{text || empty}</p>
+    </section>
+  );
+}
+
+const isRecord = (person: PersonSummary | PersonRecord): person is PersonRecord => "email" in person;
+
+/** School, department, about (+ expertise for experts); the admin's record view adds contact, city, goals, team and links. */
+function PersonDetails({ person }: { person: PersonSummary | PersonRecord }) {
+  const record = isRecord(person) ? person : null;
+  const tags = splitTags(person.expertiseArea);
+  const links = record ? Object.entries(record.socialLinks) : [];
+
+  return (
+    <>
+      <dl className="grid gap-3 text-sm sm:grid-cols-2">
+        {record ? (
+          <Fact icon={Mail} label="E-posta">
+            <a href={`mailto:${record.email}`} className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
+              {record.email}
+            </a>
+          </Fact>
+        ) : null}
+        {person.role === "STUDENT" || person.school ? (
+          <Fact icon={GraduationCap} label="Okul">
+            {person.school ?? <span className="text-muted-foreground">Belirtilmemiş</span>}
+          </Fact>
+        ) : null}
+        {person.role === "STUDENT" || person.department ? (
+          <Fact icon={Building2} label="Bölüm">
+            {person.department ?? <span className="text-muted-foreground">Belirtilmemiş</span>}
+          </Fact>
+        ) : null}
+        {record ? (
+          <Fact icon={MapPin} label="Şehir">
+            {record.city ?? <span className="text-muted-foreground">Belirtilmemiş</span>}
+          </Fact>
+        ) : null}
+        {record ? (
+          <Fact icon={Users} label="Ekip">
+            {record.team ? (
+              <>
+                {record.team.name}
+                {record.isRepresentative ? (
+                  <Badge variant="secondary" className="ml-2 align-middle">
+                    Ekip temsilcisi
+                  </Badge>
+                ) : null}
+              </>
+            ) : (
+              <span className="text-muted-foreground">Ekip yok</span>
+            )}
+          </Fact>
+        ) : null}
+      </dl>
+
+      {tags.length > 0 ? (
+        <ul className="flex flex-wrap gap-2" aria-label="Uzmanlık alanları">
+          {tags.map((tag) => (
+            <li key={tag}>
+              <Badge variant="secondary">{tag}</Badge>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <TextBlock title="Hakkımda" text={person.about} empty="Henüz bir şey yazmamış." />
+      {record ? <TextBlock title="Hedefler" text={record.goals} empty="Henüz hedef eklememiş." /> : null}
+      {record?.team?.focusArea ? (
+        <section aria-label="Ekibin çözmek istediği sorun" className="flex items-start gap-2.5 rounded-lg bg-muted/40 p-3 text-sm">
+          <Target className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <p className="leading-relaxed text-muted-foreground">{record.team.focusArea}</p>
+        </section>
+      ) : null}
+      {links.length > 0 ? (
+        <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm" aria-label="Bağlantılar">
+          {links.map(([key, url]) => (
+            <li key={key}>
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="inline-flex items-center gap-1.5 rounded-sm text-brand-soft underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Link2 className="size-3.5" aria-hidden />
+                {SOCIAL_LABELS[key] ?? key}
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </>
+  );
+}
+
 interface PersonCardGridProps {
-  people: PersonSummary[];
+  people: Array<PersonSummary | PersonRecord>;
   /** Whether the viewer may message these people (server decides from the contact policy). */
   canMessage?: boolean;
-  /** Extra per-person content rendered inside the detail modal (e.g. a mentor's availability). */
+  /** The viewer's own card (e.g. in "Ekibim") opens without a message form. */
+  viewerId?: string;
+  /** Extra per-person content rendered inside the detail modal (e.g. the admin's badge panel). */
   details?: Record<string, ReactNode>;
   emptyTitle?: string;
   emptyDescription?: string;
 }
 
-/** Card grid with name + photo only; a card opens the person's details (department, about, team) and a message form. */
-export function PersonCardGrid({ people, canMessage = false, details = {}, emptyTitle = "Henüz kimse yok", emptyDescription }: PersonCardGridProps) {
+/** Card grid with name + photo only; a card opens the person's details and a message form. */
+export function PersonCardGrid({ people, canMessage = false, viewerId, details = {}, emptyTitle = "Henüz kimse yok", emptyDescription }: PersonCardGridProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const active = people.find((p) => p.id === openId) ?? null;
 
@@ -99,7 +212,10 @@ export function PersonCardGrid({ people, canMessage = false, details = {}, empty
               )}
             >
               <PersonAvatar person={person} className="size-16" />
-              <span className="line-clamp-2 text-sm font-semibold text-balance">{fullName(person)}</span>
+              <span className="line-clamp-2 text-sm font-semibold text-balance">
+                {fullName(person)}
+                {person.id === viewerId ? <span className="font-normal text-muted-foreground"> (sen)</span> : null}
+              </span>
             </button>
           </li>
         ))}
@@ -107,7 +223,7 @@ export function PersonCardGrid({ people, canMessage = false, details = {}, empty
 
       <Dialog open={active !== null} onOpenChange={(open) => !open && setOpenId(null)}>
         {active ? (
-          <DialogContent className="max-w-lg gap-5">
+          <DialogContent className="max-h-[90dvh] max-w-lg gap-5 overflow-y-auto">
             <div className="flex items-center gap-4 pr-8">
               <PersonAvatar person={active} className="size-16" />
               <div className="min-w-0">
@@ -117,51 +233,11 @@ export function PersonCardGrid({ people, canMessage = false, details = {}, empty
             </div>
             <DialogDescription className="sr-only">{fullName(active)} profil ayrıntıları</DialogDescription>
 
-            <dl className="grid gap-3 text-sm">
-              {active.department ? (
-                <div className="flex items-start gap-2">
-                  <Building2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-                  <dt className="sr-only">Bölüm</dt>
-                  <dd>{active.department}</dd>
-                </div>
-              ) : null}
-              {active.city ? (
-                <div className="flex items-start gap-2">
-                  <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-                  <dt className="sr-only">Şehir</dt>
-                  <dd>{active.city}</dd>
-                </div>
-              ) : null}
-              {active.team ? (
-                <div className="flex items-start gap-2">
-                  <Users className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-                  <dt className="sr-only">Takım</dt>
-                  <dd>
-                    {active.team.name}
-                    {active.team.focusArea ? <span className="text-muted-foreground"> · {active.team.focusArea}</span> : null}
-                  </dd>
-                </div>
-              ) : null}
-            </dl>
-
-            {splitTags(active.expertiseArea).length > 0 ? (
-              <ul className="flex flex-wrap gap-2" aria-label="Uzmanlık alanları">
-                {splitTags(active.expertiseArea).map((tag) => (
-                  <li key={tag}>
-                    <Badge variant="secondary">{tag}</Badge>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-
-            <section aria-label="Hakkımda" className="flex flex-col gap-1.5">
-              <h3 className="text-xs font-medium text-subtle">Hakkında</h3>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">{active.about || "Henüz bir şey yazmamış."}</p>
-            </section>
+            <PersonDetails person={active} />
 
             {details[active.id] ?? null}
 
-            {canMessage ? <MessageForm key={active.id} person={active} onSent={() => setOpenId(null)} /> : null}
+            {canMessage && active.id !== viewerId ? <MessageForm key={active.id} person={active} onSent={() => setOpenId(null)} /> : null}
           </DialogContent>
         ) : null}
       </Dialog>

@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Mail, Target, Users } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Link2, Mail, NotebookPen, Target, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AddToCalendar } from "@/components/ui/add-to-calendar";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,13 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { formatDateTime, formatRelative, formatTime } from "@/lib/format";
 import type { ActionResult } from "@/lib/action-result";
 import { fullName } from "@/lib/utils";
-import { cancelAppointmentAction, completeAppointmentAction } from "../application/mentoring.actions";
+import { approveAppointmentAction, cancelAppointmentAction, completeAppointmentAction } from "../application/mentoring.actions";
 import type { MentorAppointmentRow } from "../application/mentor-portal.queries";
-import { APPOINTMENT_STATUS_LABELS, canCancel, canComplete } from "../domain/appointment-policy";
+import { APPOINTMENT_STATUS_LABELS, canApprove, canCancel, canComplete } from "../domain/appointment-policy";
 import { appointmentCalendarEvent, appointmentIcsHref } from "../domain/calendar-event";
 import { ConfirmActionButton } from "@/components/ui/confirm-action-button";
 
-const STATUS_VARIANT = { CONFIRMED: "brand", COMPLETED: "success", CANCELLED: "outline" } as const;
+const STATUS_VARIANT = { PENDING: "warning", CONFIRMED: "brand", COMPLETED: "success", CANCELLED: "outline" } as const;
 
 /** Session card with the requesting team's brief (members, departments, focus area). Sessions run on external links. */
 export function MentorAppointmentCard({ appointment: a, showActions = true }: { appointment: MentorAppointmentRow; showActions?: boolean }) {
@@ -23,6 +23,8 @@ export function MentorAppointmentCard({ appointment: a, showActions = true }: { 
   const title = team.name ?? fullName(team.members[0] ?? { name: "Katılımcı", surname: "" });
   const cancellable = showActions && canCancel(a).allowed;
   const completable = showActions && canComplete(a).allowed;
+  // Only admins load PENDING sessions, so the approve button appears on the admin page alone.
+  const approvable = showActions && canApprove(a).allowed;
 
   return (
     <Card>
@@ -48,14 +50,28 @@ export function MentorAppointmentCard({ appointment: a, showActions = true }: { 
         <div className="grid gap-5 md:grid-cols-2">
           <div className="flex flex-col gap-2">
             <h3 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <Target className="size-3.5" aria-hidden /> Çalışma alanı
+              <Target className="size-3.5" aria-hidden /> Projede çözmek istedikleri sorun
             </h3>
-            <p className="text-sm text-pretty">{team.focusArea ?? "Takım çalışma alanını henüz belirtmedi."}</p>
+            <p className="text-sm text-pretty">{team.focusArea ?? "Ekip henüz eklemedi."}</p>
             {a.notes ? (
               <div className="mt-2 rounded-lg bg-muted/60 p-3">
-                <p className="mb-1 text-xs font-medium text-muted-foreground">Talep notu</p>
+                <p className="mb-1 text-xs font-medium text-muted-foreground">Seans notu</p>
                 <p className="text-sm whitespace-pre-wrap">{a.notes}</p>
               </div>
+            ) : null}
+            {a.adminNotes ? (
+              <div className="rounded-lg border border-dashed border-border p-3">
+                <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <NotebookPen className="size-3.5" aria-hidden /> Yönetici notu (yalnızca yöneticiler görür)
+                </p>
+                <p className="text-sm whitespace-pre-wrap">{a.adminNotes}</p>
+              </div>
+            ) : null}
+            {a.meetingLink ? (
+              <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                <Link2 className="size-3.5 shrink-0" aria-hidden />
+                <span className="truncate">{a.meetingLink}</span>
+              </p>
             ) : null}
           </div>
 
@@ -87,6 +103,20 @@ export function MentorAppointmentCard({ appointment: a, showActions = true }: { 
               <Mail aria-hidden /> İletişim
             </a>
           </Button>
+          {approvable ? (
+            <ConfirmActionButton
+              label={
+                <>
+                  <BadgeCheck aria-hidden /> Onayla
+                </>
+              }
+              title="Seansı onayla"
+              description={`${title} ile seans onaylanacak; mentor ve ekip üyeleri panellerinde görecek ve bildirim alacak.`}
+              confirmLabel="Onayla"
+              successMessage="Seans onaylandı"
+              action={approveAppointmentAction.bind(null, a.id)}
+            />
+          ) : null}
           {completable ? <AppointmentActionButton kind="complete" name={title} action={() => completeAppointmentAction(a.id)} /> : null}
           {cancellable ? <AppointmentActionButton kind="cancel" name={title} action={() => cancelAppointmentAction(a.id)} /> : null}
         </div>
@@ -121,7 +151,7 @@ function AppointmentActionButton({
     <ConfirmActionButton
       label="İptal et"
       title="Seansı iptal et"
-      description={`${name} ile seans iptal edilecek, slot kapatılacak ve katılımcıya e-posta gönderilecek.`}
+      description={`${name} ile seans iptal edilecek.`}
       confirmLabel="Seansı iptal et"
       successMessage="Seans iptal edildi"
       destructive

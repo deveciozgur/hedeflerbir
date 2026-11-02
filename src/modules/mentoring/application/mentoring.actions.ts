@@ -8,9 +8,9 @@ import { requireRole } from "@/server/auth/guards";
 import { fail, ok, type ActionResult } from "@/lib/action-result";
 import { awardBadgesSafely } from "@/modules/engagement/application/badges.service";
 import { formatDateTime } from "@/lib/format";
-import { canBook, canCancel, canComplete } from "../domain/appointment-policy";
+import { canApprove, canBook, canCancel, canComplete } from "../domain/appointment-policy";
 import { generateSlots, partitionConflicts, validateWindow } from "../domain/availability";
-import { appointmentIdSchema, availabilityInputSchema, teamBookingSchema, weeklyAvailabilitySchema } from "../domain/schemas";
+import { appointmentIdSchema, availabilityInputSchema, sessionScheduleSchema, teamBookingSchema, weeklyAvailabilitySchema } from "../domain/schemas";
 import { cellsToRanges } from "../domain/weekly-template";
 import { syncTemplateSlots } from "./weekly-availability.service";
 import { sendAppointmentBookedEmails, sendAppointmentCancelledEmail } from "./appointment-emails";
@@ -99,13 +99,30 @@ export async function removeSlotAction(slotId: unknown): Promise<ActionResult> {
   return ok(undefined);
 }
 
-// ───────────────────────────── Student: booking ─────────────────────────────
+// ───────────────────────────── Admin: team sessions ─────────────────────────────
 
 class BookingConflict extends Error {}
 
+const ACTIVE_STATUSES = ["PENDING", "CONFIRMED"] as const;
+
+/** The team's contact (Appointment.studentId): its representative, else the first member alphabetically. */
+const teamWithContact = (teamId: string) =>
+  db.team.findUnique({
+    where: { id: teamId },
+    select: {
+      id: true,
+      name: true,
+      representativeId: true,
+      members: { where: { isActive: true, role: "STUDENT" }, orderBy: [{ name: "asc" }, { surname: "asc" }], select: { id: true, ...partySelect } },
+    },
+  });
+
+const contactOf = (team: NonNullable<Awaited<ReturnType<typeof teamWithContact>>>) =>
+  team.members.find((m) => m.id === team.representativeId) ?? team.members[0];
+
 /**
- * Admin books a mentor slot for a team. The first team member (alphabetically) is stored as the
- * contact (Appointment.studentId); every member and the mentor are notified.
+ * Admin reserves an open mentor slot for a team. The session starts PENDING: the mentor and the team
+ * only see it (and get notified) once an admin approves it.
  */
 export async function bookForTeamAction(input: unknown): Promise<ActionResult<{ appointmentId: string }>> {
   await requireRole("ADMIN");
@@ -116,17 +133,14 @@ export async function bookForTeamAction(input: unknown): Promise<ActionResult<{ 
   const [slot, team] = await Promise.all([
     db.mentorSlot.findUnique({
       where: { id: parsed.data.slotId },
-      select: { id: true, startTime: true, endTime: true, isBooked: true, mentor: { select: { id: true, role: true, isActive: true, ...partySelect } } },
+      select: { id: true, startTime: true, endTime: true, isBooked: true, mentor: { select: { id: true, role: true, isActive: true } } },
     }),
-    db.team.findUnique({
-      where: { id: parsed.data.teamId },
-      select: { id: true, name: true, members: { where: { isActive: true, role: "STUDENT" }, orderBy: [{ name: "asc" }, { surname: "asc" }], select: { id: true, ...partySelect } } },
-    }),
+    teamWithContact(parsed.data.teamId),
   ]);
   if (!slot || slot.mentor.role !== "MENTOR" || !slot.mentor.isActive) return fail("Bu saat artık mevcut değil.");
-  if (!team) return fail("Takım bulunamadı.");
-  const contact = team.members[0];
-  if (!contact) return fail("Bu takımda aktif katılımcı yok.");
+  if (!team) return fail("Ekip bulunamadı.");
+  const contact = contactOf(team);
+  if (!contact) return fail("Bu ekipte aktif katılımcı yok.");
 
   const eligibility = canBook(slot);
   if (!eligibility.allowed) return fail(eligibility.reason);
@@ -134,12 +148,12 @@ export async function bookForTeamAction(input: unknown): Promise<ActionResult<{ 
   const clash = await db.appointment.findFirst({
     where: {
       teamId: team.id,
-      status: "CONFIRMED",
+      status: { in: [...ACTIVE_STATUSES] },
       slot: { startTime: { lt: slot.endTime }, endTime: { gt: slot.startTime } },
     },
     select: { id: true },
   });
-  if (clash) return fail("Bu takımın bu saatte başka bir seansı var.");
+  if (clash) return fail("Bu ekibin bu saatte başka bir seansı var.");
 
   const meetingLink = parsed.data.meetingLink;
   let appointmentId: string;
@@ -153,41 +167,131 @@ export async function bookForTeamAction(input: unknown): Promise<ActionResult<{ 
       if (claim.count !== 1) throw new BookingConflict();
 
       const appointment = await tx.appointment.create({
-        data: { slotId: slot.id, studentId: contact.id, teamId: team.id, mentorId: slot.mentor.id, meetingLink, notes: parsed.data.notes || null },
+        data: { slotId: slot.id, studentId: contact.id, teamId: team.id, mentorId: slot.mentor.id, status: "PENDING", meetingLink, notes: parsed.data.notes || null },
         select: { id: true },
-      });
-      await tx.notification.createMany({
-        data: [
-          { userId: slot.mentor.id, type: "APPOINTMENT_BOOKED" as const, title: `Yeni mentorluk seansı: ${team.name}`, body: formatDateTime(slot.startTime), href: "/mentor/appointments" },
-          ...team.members.map((m) => ({
-            userId: m.id,
-            type: "APPOINTMENT_BOOKED" as const,
-            title: "Takımına mentorluk seansı planlandı",
-            body: `${slot.mentor.name} ${slot.mentor.surname} · ${formatDateTime(slot.startTime)}`,
-            href: "/mentors",
-          })),
-        ],
       });
       return appointment.id;
     });
   } catch (error) {
-    if (error instanceof BookingConflict) return fail("Bu saat az önce başka bir takıma verildi.");
+    if (error instanceof BookingConflict) return fail("Bu saat az önce başka bir ekibe verildi.");
     throw error;
   }
 
+  revalidateMentoring();
+  return ok({ appointmentId });
+}
+
+/**
+ * Admin defines a session between a team and a mentor at any date/time, independent of the mentor's
+ * published availability. Created PENDING; an open slot at the same start is reused, other overlapping
+ * open slots are closed so nobody else can be booked on top of it.
+ */
+export async function scheduleSessionAction(input: unknown): Promise<ActionResult<{ appointmentId: string }>> {
+  await requireRole("ADMIN");
+  const parsed = sessionScheduleSchema.safeParse(input);
+  if (!parsed.success) return fail("Lütfen alanları kontrol edin.", z.flattenError(parsed.error).fieldErrors);
+
+  const start = new Date(parsed.data.start);
+  const end = new Date(start.getTime() + parsed.data.durationMinutes * 60_000);
+  if (start <= new Date()) return fail("Geçmiş bir saate seans tanımlanamaz.", { start: ["İleri bir tarih seçin."] });
+
+  const [mentor, team] = await Promise.all([
+    db.user.findFirst({ where: { id: parsed.data.mentorId, role: "MENTOR", isActive: true }, select: { id: true } }),
+    teamWithContact(parsed.data.teamId),
+  ]);
+  if (!mentor) return fail("Mentor bulunamadı.", { mentorId: ["Bir mentor seçin."] });
+  if (!team) return fail("Ekip bulunamadı.", { teamId: ["Bir ekip seçin."] });
+  const contact = contactOf(team);
+  if (!contact) return fail("Bu ekipte aktif katılımcı yok.", { teamId: ["Önce ekibe üye ekleyin."] });
+
+  const overlap = { startTime: { lt: end }, endTime: { gt: start } };
+  const [mentorClash, teamClash] = await Promise.all([
+    db.appointment.findFirst({ where: { mentorId: mentor.id, status: { in: [...ACTIVE_STATUSES] }, slot: overlap }, select: { id: true } }),
+    db.appointment.findFirst({ where: { teamId: team.id, status: { in: [...ACTIVE_STATUSES] }, slot: overlap }, select: { id: true } }),
+  ]);
+  if (mentorClash) return fail("Mentorun bu saatte başka bir seansı var.", { start: ["Başka bir saat seçin."] });
+  if (teamClash) return fail("Ekibin bu saatte başka bir seansı var.", { start: ["Başka bir saat seçin."] });
+
+  const appointmentId = await db.$transaction(async (tx) => {
+    const sameStart = await tx.mentorSlot.findUnique({ where: { mentorId_startTime: { mentorId: mentor.id, startTime: start } }, select: { id: true } });
+    const slot = sameStart
+      ? await tx.mentorSlot.update({ where: { id: sameStart.id }, data: { endTime: end, isBooked: true }, select: { id: true } })
+      : await tx.mentorSlot.create({ data: { mentorId: mentor.id, startTime: start, endTime: end, isBooked: true }, select: { id: true } });
+    await tx.mentorSlot.updateMany({ where: { mentorId: mentor.id, id: { not: slot.id }, isBooked: false, ...overlap }, data: { isBooked: true } });
+    const appointment = await tx.appointment.create({
+      data: {
+        slotId: slot.id,
+        studentId: contact.id,
+        teamId: team.id,
+        mentorId: mentor.id,
+        status: "PENDING",
+        meetingLink: parsed.data.meetingLink,
+        notes: parsed.data.notes || null,
+        adminNotes: parsed.data.adminNotes || null,
+      },
+      select: { id: true },
+    });
+    return appointment.id;
+  });
+
+  revalidateMentoring();
+  return ok({ appointmentId });
+}
+
+/** "Onayla": PENDING → CONFIRMED. From now on the mentor and every team member see it and are notified. */
+export async function approveAppointmentAction(appointmentId: unknown): Promise<ActionResult> {
+  await requireRole("ADMIN");
+  const id = appointmentIdSchema.safeParse(appointmentId);
+  if (!id.success) return fail("Geçersiz seans.");
+
+  const appointment = await db.appointment.findUnique({
+    where: { id: id.data },
+    select: {
+      id: true,
+      status: true,
+      meetingLink: true,
+      notes: true,
+      slot: { select: { startTime: true, endTime: true } },
+      mentor: { select: { id: true, ...partySelect } },
+      student: { select: { id: true, ...partySelect } },
+      team: { select: { name: true, members: { where: { isActive: true }, select: { id: true } } } },
+    },
+  });
+  if (!appointment) return fail("Seans bulunamadı.");
+  const eligibility = canApprove({ status: appointment.status, startTime: appointment.slot.startTime });
+  if (!eligibility.allowed) return fail(eligibility.reason);
+
+  const { count } = await db.appointment.updateMany({ where: { id: appointment.id, status: "PENDING" }, data: { status: "CONFIRMED", approvedAt: new Date() } });
+  if (count === 0) return fail("Seans az önce güncellendi; sayfayı yenileyin.");
+
+  const when = formatDateTime(appointment.slot.startTime);
+  const memberIds = appointment.team?.members.map((m) => m.id) ?? [appointment.student.id];
+  await db.notification.createMany({
+    data: [
+      { userId: appointment.mentor.id, type: "APPOINTMENT_BOOKED" as const, title: `Yeni mentorluk seansı: ${appointment.team?.name ?? `${appointment.student.name} ${appointment.student.surname}`}`, body: when, href: "/mentor/appointments" },
+      ...memberIds.map((userId) => ({
+        userId,
+        type: "APPOINTMENT_BOOKED" as const,
+        title: "Ekibine mentorluk seansı planlandı",
+        body: `${appointment.mentor.name} ${appointment.mentor.surname} · ${when}`,
+        href: "/mentors",
+      })),
+    ],
+  });
+
   after(() =>
     sendAppointmentBookedEmails({
-      student: contact,
-      mentor: slot.mentor,
-      startTime: slot.startTime,
-      endTime: slot.endTime,
-      meetingLink,
-      notes: parsed.data.notes || null,
+      student: appointment.student,
+      mentor: appointment.mentor,
+      startTime: appointment.slot.startTime,
+      endTime: appointment.slot.endTime,
+      meetingLink: appointment.meetingLink,
+      notes: appointment.notes,
     }),
   );
 
   revalidateMentoring();
-  return ok({ appointmentId });
+  return ok(undefined);
 }
 
 // ───────────────────────────── Shared: lifecycle ─────────────────────────────
@@ -214,22 +318,27 @@ export async function cancelAppointmentAction(appointmentId: unknown): Promise<A
   if (!eligibility.allowed) return fail(eligibility.reason);
 
   const counterpartId = user.role === "MENTOR" ? appointment.student.id : appointment.mentor.id;
+  const announced = appointment.status !== "PENDING";
   await db.$transaction([
     db.appointment.update({ where: { id: appointment.id }, data: { status: "CANCELLED" } }),
-    // A student cancellation re-opens the slot; a mentor cancellation withdraws it.
+    // A student/admin cancellation re-opens the slot; a mentor cancellation withdraws it.
     db.mentorSlot.update({ where: { id: appointment.slot.id }, data: { isBooked: user.role === "MENTOR" } }),
-    db.notification.create({
-      data: {
-        userId: counterpartId,
-        type: "APPOINTMENT_CANCELLED",
-        title: "Mentorluk seansı iptal edildi",
-        body: formatDateTime(appointment.slot.startTime),
-        href: user.role === "MENTOR" ? "/mentors" : "/mentor/appointments",
-      },
-    }),
+    ...(announced
+      ? [
+          db.notification.create({
+            data: {
+              userId: counterpartId,
+              type: "APPOINTMENT_CANCELLED",
+              title: "Mentorluk seansı iptal edildi",
+              body: formatDateTime(appointment.slot.startTime),
+              href: user.role === "MENTOR" ? "/mentors" : "/mentor/appointments",
+            },
+          }),
+        ]
+      : []),
   ]);
 
-  after(() =>
+  if (announced) after(() =>
     sendAppointmentCancelledEmail(
       {
         student: appointment.student,

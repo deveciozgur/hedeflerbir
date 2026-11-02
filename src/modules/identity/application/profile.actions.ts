@@ -20,8 +20,8 @@ export async function updateStudentProfileAction(input: unknown): Promise<Action
   const parsed = studentProfileSchema.safeParse(input);
   if (!parsed.success) return fail("Lütfen alanları kontrol edin.", z.flattenError(parsed.error).fieldErrors);
 
-  const { name, surname, bio, goals, department, city } = parsed.data;
-  const profile = { bio: bio || null, goals: goals || null, department: department || null, city: city || null };
+  const { name, surname, bio, goals, school, department, city } = parsed.data;
+  const profile = { bio: bio || null, goals: goals || null, school: school || null, department: department || null, city: city || null };
   await db.user.update({
     where: { id: user.id },
     data: { name, surname, profile: { upsert: { create: profile, update: profile } } },
@@ -69,7 +69,8 @@ export async function changePasswordAction(input: unknown): Promise<ActionResult
   const valid = account?.passwordHash ? await bcrypt.compare(parsed.data.currentPassword, account.passwordHash) : false;
   if (!valid) return fail("Mevcut şifre hatalı.", { currentPassword: ["Mevcut şifre hatalı."] });
 
-  await db.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(parsed.data.newPassword, 12) } });
+  await db.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(parsed.data.newPassword, 12), mustChangePassword: false } });
+  revalidatePath("/", "layout"); // drops the shell's first-login password reminder
   return ok(undefined);
 }
 

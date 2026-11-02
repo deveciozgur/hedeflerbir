@@ -3,37 +3,19 @@
 import { useOptimistic, useTransition } from "react";
 import { Award, Check } from "lucide-react";
 import { toast } from "sonner";
-import { Label } from "@/components/ui/label";
-import { NativeSelect } from "@/components/ui/native-select";
 import { cn } from "@/lib/utils";
 import { BADGES } from "@/modules/engagement/domain/badges";
-import { assignTeamAction, setBadgeAction } from "../application/teams.actions";
+import { setBadgeAction } from "../application/teams.actions";
 
-interface ParticipantAdminPanelProps {
-  userId: string;
-  teamId: string | null;
-  teams: Array<{ id: string; name: string }>;
-  badgeCodes: string[];
-}
-
-/** Admin controls inside a participant's detail modal: team membership and manual badge awards. */
-export function ParticipantAdminPanel({ userId, teamId, teams, badgeCodes }: ParticipantAdminPanelProps) {
+/** Admin control inside a participant's detail modal: manual badge awards (teams are managed on /admin/teams). */
+export function ParticipantAdminPanel({ userId, badgeCodes }: { userId: string; badgeCodes: string[] }) {
   const [pending, startTransition] = useTransition();
-  const [team, setOptimisticTeam] = useOptimistic(teamId ?? "");
   const [held, toggleOptimistic] = useOptimistic(new Set(badgeCodes), (current: Set<string>, code: string) => {
     const next = new Set(current);
     if (next.has(code)) next.delete(code);
     else next.add(code);
     return next;
   });
-
-  const changeTeam = (value: string) =>
-    startTransition(async () => {
-      setOptimisticTeam(value);
-      const result = await assignTeamAction({ userId, teamId: value || null });
-      if (!result.ok) toast.error(result.error);
-      else toast.success(value ? "Takım güncellendi" : "Takımdan çıkarıldı");
-    });
 
   const toggleBadge = (code: string) =>
     startTransition(async () => {
@@ -45,17 +27,6 @@ export function ParticipantAdminPanel({ userId, teamId, teams, badgeCodes }: Par
 
   return (
     <section aria-label="Yönetici işlemleri" className="flex flex-col gap-4 border-t border-border pt-5">
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`team-${userId}`}>Takım</Label>
-        <NativeSelect id={`team-${userId}`} value={team} onChange={(e) => changeTeam(e.target.value)} disabled={pending}>
-          <option value="">Takımsız</option>
-          {teams.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </NativeSelect>
-      </div>
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 flex items-center gap-1.5 text-sm font-medium">
           <Award className="size-4 text-muted-foreground" aria-hidden /> Rozetler

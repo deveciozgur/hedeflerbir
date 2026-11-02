@@ -3,6 +3,7 @@
 import { db } from "@/server/db";
 import { requireRole } from "@/server/auth/guards";
 import { fullName } from "@/lib/utils";
+import { formatDate } from "@/lib/format";
 
 export type SearchGroup = "Eğitimler" | "Dersler" | "Ödevler" | "Mentorlar" | "Eğitmenler" | "Kullanıcılar";
 
@@ -86,11 +87,16 @@ export async function searchAction(rawQuery: unknown): Promise<SearchResult[]> {
           take: PER_GROUP,
           select: { id: true, name: true, surname: true, email: true },
         }),
-        db.course.findMany({ where: { title: like(q) }, take: PER_GROUP, select: { id: true, title: true } }),
+        db.courseSession.findMany({
+          where: { title: like(q), course: { status: { not: "DRAFT" } } },
+          orderBy: { scheduleDate: "asc" },
+          take: PER_GROUP,
+          select: { id: true, title: true, scheduleDate: true },
+        }),
       ]);
       return [
         ...users.map((u) => ({ id: u.id, group: "Kullanıcılar" as const, title: fullName(u), subtitle: u.email, href: `/admin/users?q=${encodeURIComponent(u.email)}` })),
-        ...courses.map((c) => ({ id: c.id, group: "Eğitimler" as const, title: c.title, subtitle: null, href: `/admin/courses/${c.id}` })),
+        ...courses.map((c) => ({ id: c.id, group: "Eğitimler" as const, title: c.title, subtitle: formatDate(c.scheduleDate), href: "/admin/trainings" })),
       ];
     }
     default:

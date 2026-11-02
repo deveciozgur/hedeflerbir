@@ -73,7 +73,7 @@ export async function resetPasswordAction(input: unknown): Promise<ActionResult>
     if (claim.count !== 1) return false;
     await tx.user.update({
       where: { id: record.user.id },
-      data: { passwordHash, sessionVersion: { increment: 1 } }, // signs out every existing session
+      data: { passwordHash, mustChangePassword: false, sessionVersion: { increment: 1 } }, // signs out every existing session
     });
     await tx.passwordResetToken.updateMany({ where: { userId: record.user.id, usedAt: null }, data: { usedAt: now } });
     return true;

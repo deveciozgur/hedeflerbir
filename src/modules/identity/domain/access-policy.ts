@@ -13,7 +13,7 @@ interface AreaPolicy {
 
 const AREAS = {
   student: {
-    prefixes: ["/dashboard", "/trainings", "/courses", "/assignments", "/team", "/profile", "/instructors", "/mentors", "/messages"],
+    prefixes: ["/dashboard", "/trainings", "/courses", "/assignments", "/team", "/participants", "/profile", "/instructors", "/mentors", "/messages"],
     roles: ["STUDENT"],
     portal: "student",
     home: "/dashboard",

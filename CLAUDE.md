@@ -38,9 +38,9 @@ DDD bounded contexts in `src/modules/<context>/{domain,application,ui}`:
 
 | Context | Owns |
 | --- | --- |
-| `identity` | login portals (+ KVKK notice), RBAC (`domain/access-policy.ts`), profiles, password reset, invites, demo accounts |
+| `identity` | login portals (+ required KVKK consent checkbox, `kvkkConsentAt`), first-login password reminder (`mustChangePassword`), RBAC (`domain/access-policy.ts`), profiles, password reset, invites, demo accounts |
 | `learning` | courses/programmes, live trainings (`trainings.queries.ts`, `training-admin.actions.ts`), attendance, module/lesson curriculum, course player, certificates |
-| `people` | person cards + detail modal (`PersonCardGrid`), participant/instructor listings, teams (`Team`), team assignment, manual badge award |
+| `people` | person cards + detail modal (`PersonCardGrid`: `PersonSummary` = school/department/about, `PersonRecord` = the admin's full view), teams with representative (`/admin/teams`), manual badge award |
 | `assessment` | quizzes (scoring in `domain/quiz.ts`), quiz runner/editor |
 | `assignments` | assignments, submissions, grading desk, feedback history, file policy |
 | `mentoring` | mentor slots, weekly availability template, appointments |
@@ -62,13 +62,15 @@ Feature briefs often use generic names. They map to existing pieces:
 | --- | --- |
 | `CourseEnrollment` | `Enrollment` (+ `status`, `completedAt`) |
 | `AssignmentSubmission` (PENDING/REVIEWED/REJECTED) | `Submission` (SUBMITTED/GRADED/RETURNED) + `AssignmentFeedback` history |
-| `MentorshipSession` | `Appointment` on a `MentorSlot` (auto-confirmed, no PENDING state), booked by an admin for a team (`Appointment.teamId`) |
+| `MentorshipSession` | `Appointment` on a `MentorSlot` for a team (`teamId`); admin creates it `PENDING` (`scheduleSessionAction` any date/time, or `bookForTeamAction` on an open slot) and `approveAppointmentAction` ("Onayla") makes it `CONFIRMED`. `sessionUrl` = `meetingLink`, `adminNotes` admin-only |
 | `MentorProfile` | `Profile` (`title`, `expertiseArea`, `socialLinks`) + `MentorAvailability` (meeting link is per appointment, not on the profile) |
 | `LiveTraining` / `Training` | `CourseSession` (+ `instructorId`, `topics` one per line, `badgeCode`) in a published course (programme) |
 | `TrainingAttendance` | `SessionAttendance` (PRESENT = training completed) |
 | `TrainingAssignment` | `Assignment` with `sessionId` (uploaded on `/trainings/[sessionId]`) |
 | `isSuspended` | `User.isActive = false` (blocks login; `sessionVersion` revokes sessions) |
-| `about` / `Hakkımda` | `Profile.bio`; `department` and `city` live on `Profile` |
+| `about` / `Hakkımda` | `Profile.bio`; `school`, `department`, `city`, `goals` live on `Profile` (not `User`) |
+| `Team.targetProblem` / `representativeId` | `Team.focusArea` ("Projede çözmek istediğiniz sorun") and `Team.representativeId` (unique; a coordinator, not a leader) |
+| "Program" / `/admin/courses` | removed from the UI (redirects to `/admin/trainings`); trainings go into one programme course (`program.service.ts`, slug `hedeflerbir-2026`) |
 | `db push` | a migration file (`/db-sync`) |
 | `/student/courses/[slug]/player` | `/courses/[slug]?lesson=<id>` |
 | `/expert/grading` | `/instructor/assignments/[assignmentId]` (grading desk) |
@@ -79,17 +81,20 @@ Feature briefs often use generic names. They map to existing pieces:
 
 Routes by role:
 
-- **Student**: `/dashboard` (training progress + badge showcase), `/trainings` (live-training calendar, Tamamlandı/Tamamlanmadı) and `/trainings/[sessionId]` (topics, link, assignment upload), `/assignments` (to-do list linking to the training), `/team` (Ekibim), `/mentors` (read-only availability + team sessions), `/profile` (attendance, 9 badges).
-- **Instructor**: `/instructor/students` is person cards; roll calls via `attendance-dialog.tsx`.
-- **Mentor**: appointment cards show the team brief; no join button, no booking.
-- **Admin**: `/admin` (training progress + weekly calendar), `/admin/users` (single create + CSV import, suspension), `/admin/participants` (cards, team select, badge toggles, team manager), `/admin/trainings` (training cards + Eğitmenler cards), `/admin/mentors` (session calendar, team booking via `slot-picker.tsx`), `/admin/courses` ("Programlar"), `/admin/reports` (demographics, attendance, mentoring, expertise, export; `/admin/exports` redirects here), `/admin/audit`.
+- **Student**: `/dashboard` (training progress + badge showcase), `/trainings` (live-training calendar, Tamamlandı/Tamamlanmadı) and `/trainings/[sessionId]` (topics, link, assignment upload), `/assignments` (to-do list linking to the training), `/team` (Ekibim, read-only: problem, representative, members), `/participants` (all participants as cards), `/mentors` (mentor cards + the team's approved sessions; no calendar, `/mentors/[id]` redirects), `/profile` (attendance, 9 badges).
+- **Instructor**: `/instructor/students` lists every participant as person cards; roll calls via `attendance-dialog.tsx`.
+- **Mentor**: appointment cards show the team brief; only approved sessions (PENDING never reaches mentor or team views); no join button, no booking.
+- **Admin**: `/admin` (training progress + weekly calendar), `/admin/users` (single create + CSV import, suspension), `/admin/participants` (cards with the full profile record + badge toggles), `/admin/teams` (members multi-select, representative, problem), `/admin/trainings` (training cards + Eğitmenler cards; no programme picker), `/admin/mentors` ("Yeni seans", pending sessions with Onayla, approved/past sessions, mentor availability), `/admin/reports` (demographics, attendance, mentoring, expertise, export; `/admin/exports` redirects here), `/admin/audit`.
 - Also: `/mentor/availability` (weekly planner), Cmd/Ctrl+K palette in every shell (`components/layout/command-palette.tsx`).
 
 ### Key flows
 
 - **Live-training programme**: the student experience is live trainings; progress = PRESENT attendances / trainings in enrolled, non-DRAFT courses (`trainingCompletion`). Every training query filters `course.status != DRAFT`; the self-paced Next.js demo course is seeded as DRAFT and hidden. Creating a training notifies enrolled students.
 - **Badges** (`engagement/domain/badges.ts`, 9 total): 6 training badges earned by attending the training with that `badgeCode`, 3 mentoring badges for the 1st/2nd/3rd completed team session, plus admin manual award/revoke (`setBadgeAction`). `awardBadgesSafely` runs after attendance and session completion (whole team).
-- **Teams**: `User.teamId`; admins manage teams and book mentor sessions for a team (`bookForTeamAction`; mentor + all members notified). Students may message only teammates (`contact-policy.ts`).
+- **Teams**: `User.teamId` + `Team.representativeId`; only admins edit them (`saveTeamAction` moves members between teams and clears a moved representative). The representative is the session contact (`Appointment.studentId`). Everyone may message everyone (`contact-policy.ts`).
+- **Mentor sessions**: notifications and e-mails go out on approval, not on creation; cancelling a PENDING session notifies no one. Queries for mentors/students filter `CONFIRMED`; reports and the admin week calendar ignore PENDING.
+- **Programme enrollment**: `enrollInProgram()` enrolls new participants (single create, CSV import) and, on every new training, all active participants; trainings stay enrollment-based.
+- **First login**: admin-issued passwords set `mustChangePassword`; the shell shows `PasswordReminder` until any password change clears it ("Anladım" hides it per browser session).
 - **Lesson completion** always goes through `completeLesson()`; it upserts `LessonProgress`, and when the last lesson is done it marks the enrollment `COMPLETED`, issues the `Certificate` and notifies. Videos complete at 90% watched, quizzes when passed, assignment lessons on submission (plus backfill when a lesson is linked to an already-submitted assignment), articles/live sessions/embedded videos via the manual button.
 - **Course page** `/courses/[slug]`: lesson-based courses render the player and redirect to a canonical `?lesson=<id>` (otherwise completing a lesson re-renders and jumps to the next one). Courses with no lessons fall back to the legacy session view.
 - **Certificates**: `/api/certificates/[code]` (PDF, public by code) and `/verify/[code]` (public, outside every RBAC area).

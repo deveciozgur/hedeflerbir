@@ -390,28 +390,40 @@ const PROGRAM_TRAININGS = [
 ] as const;
 
 const DEMO_TEAMMATES = [
-  { email: "ayse.yildiz@demo.hedeflerbir.com", name: "Ayşe", surname: "Yıldız", department: "Endüstri Mühendisliği", city: "İzmir" },
-  { email: "emre.kaya@demo.hedeflerbir.com", name: "Emre", surname: "Kaya", department: "İşletme", city: "Ankara" },
+  { email: "ayse.yildiz@demo.hedeflerbir.com", name: "Ayşe", surname: "Yıldız", school: "Ege Üniversitesi", department: "Endüstri Mühendisliği", city: "İzmir" },
+  { email: "emre.kaya@demo.hedeflerbir.com", name: "Emre", surname: "Kaya", school: "Ankara Üniversitesi", department: "İşletme", city: "Ankara" },
 ] as const;
 
-/** Teams, the live-training programme (one badge per training), attendance, a training assignment and a completed team mentoring session. */
+const ATLAS_PROBLEM =
+  "Kırsaldaki ortaokul öğrencilerinin kodlama eğitimine erişimi sınırlı. Öğretmenlerin internet bağlantısı zayıf sınıflarda da kullanabileceği, çevrimdışı çalışan bir eğitim aracı geliştirmek istiyoruz.";
+
+/**
+ * Teams (Takım Atlas: representative Can + 2 members), the live-training programme (one badge per
+ * training), attendance, a training assignment and team mentoring sessions: one completed, one
+ * approved upcoming, one awaiting the admin's approval.
+ */
 async function seedProgram(instructorId: string, studentId: string, mentorId: string) {
   const atlas = await prisma.team.upsert({
     where: { name: "Takım Atlas" },
-    create: { name: "Takım Atlas", focusArea: "Sosyal etki odaklı eğitim teknolojisi" },
-    update: {},
+    create: { name: "Takım Atlas", focusArea: ATLAS_PROBLEM },
+    update: { focusArea: ATLAS_PROBLEM },
     select: { id: true },
   });
-  await prisma.team.upsert({ where: { name: "Takım Nova" }, create: { name: "Takım Nova", focusArea: "Yapay zeka destekli girişimcilik" }, update: {} });
+  await prisma.team.upsert({ where: { name: "Takım Nova" }, create: { name: "Takım Nova", focusArea: "Küçük işletmelerin müşteri sorularını yapay zeka ile yanıtlaması." }, update: {} });
 
   await prisma.user.update({
     where: { id: studentId },
-    data: { teamId: atlas.id, profile: { update: { department: "Bilgisayar Mühendisliği", city: "İstanbul" } } },
+    data: {
+      teamId: atlas.id,
+      profile: { update: { school: "İstanbul Teknik Üniversitesi", department: "Bilgisayar Mühendisliği", city: "İstanbul", goals: "Sosyal etki projemizi pilot okullarda test etmek ve yazılım alanında staj bulmak." } },
+    },
   });
+  // Ekip temsilcisi: coordinates mentor sessions (not a leader).
+  await prisma.team.update({ where: { id: atlas.id }, data: { representativeId: studentId } });
   // Teammates for "Ekibim": invited participants without a password (they can't sign in until invited).
   const teammates = [];
   for (const mate of DEMO_TEAMMATES) {
-    const profile = { department: mate.department, city: mate.city, bio: `${mate.department} öğrencisi, HedeflerBir katılımcısı.` };
+    const profile = { school: mate.school, department: mate.department, city: mate.city, bio: `${mate.department} öğrencisi, HedeflerBir katılımcısı.` };
     teammates.push(
       await prisma.user.upsert({
         where: { email: mate.email },
@@ -505,7 +517,32 @@ async function seedProgram(instructorId: string, studentId: string, mentorId: st
       data: { slotId: pastSlot.id, studentId, mentorId, teamId: atlas.id, status: "COMPLETED", notes: "Proje fikri ve hedef kitle doğrulaması." },
     });
   }
+  // The upcoming session (seedMentoring) belongs to the team and is admin-approved.
   await prisma.appointment.updateMany({ where: { mentorId, studentId, teamId: null }, data: { teamId: atlas.id } });
+  await prisma.appointment.updateMany({ where: { mentorId, teamId: atlas.id, status: "CONFIRMED", approvedAt: null }, data: { approvedAt: new Date() } });
+
+  // One session defined by the admin and still waiting for "Onayla" (only the admin sees it).
+  const pendingStart = at(9, 17);
+  const pendingSlot = await prisma.mentorSlot.upsert({
+    where: { mentorId_startTime: { mentorId, startTime: pendingStart } },
+    create: { mentorId, startTime: pendingStart, endTime: new Date(pendingStart.getTime() + 60 * 60_000), isBooked: true },
+    update: { isBooked: true },
+    select: { id: true },
+  });
+  if (!(await prisma.appointment.findFirst({ where: { slotId: pendingSlot.id }, select: { id: true } }))) {
+    await prisma.appointment.create({
+      data: {
+        slotId: pendingSlot.id,
+        studentId,
+        mentorId,
+        teamId: atlas.id,
+        status: "PENDING",
+        meetingLink: "https://meet.google.com/hed-demo-002",
+        notes: "Prototip demosu ve geri bildirim.",
+        adminNotes: "Mentorun teyidinden sonra onaylanacak.",
+      },
+    });
+  }
 
   // Badges the roll calls and the completed session earn (the app awards these automatically on later events).
   const earned: Array<[string, string]> = [

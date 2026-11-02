@@ -21,6 +21,7 @@ import {
   roleChangeSchema,
 } from "../domain/user-admin";
 import { IMPORT_CHUNK_SIZE, parseUserCsv, type ImportRow } from "../domain/user-import";
+import { enrollInProgram } from "@/modules/learning/application/program.service";
 
 const activeAdminCount = () => db.user.count({ where: { role: "ADMIN", isActive: true } });
 
@@ -52,9 +53,10 @@ export async function createUserAction(input: unknown): Promise<ActionResult<{ t
 
   const temporaryPassword = generateTemporaryPassword();
   const created = await db.user.create({
-    data: { ...parsed.data, passwordHash: await bcrypt.hash(temporaryPassword, 12), profile: { create: {} } },
+    data: { ...parsed.data, passwordHash: await bcrypt.hash(temporaryPassword, 12), mustChangePassword: true, profile: { create: {} } },
     select: { id: true },
   });
+  if (parsed.data.role === "STUDENT") await enrollInProgram([created.id]);
   await recordAudit({
     action: "user.created",
     actorId: admin.id,
@@ -120,7 +122,7 @@ export interface ImportUsersResult {
 async function createImportedUser(row: ImportRow) {
   const passwordHash = row.password ? await bcrypt.hash(row.password, 12) : null;
   return db.user.create({
-    data: { name: row.name, surname: row.surname, email: row.email, role: row.role, passwordHash, profile: { create: {} } },
+    data: { name: row.name, surname: row.surname, email: row.email, role: row.role, passwordHash, mustChangePassword: passwordHash !== null, profile: { create: {} } },
     select: { id: true, name: true, email: true, passwordHash: true },
   });
 }
@@ -155,6 +157,7 @@ export async function importUsersAction(csvText: unknown): Promise<ActionResult<
     });
   }
   rowErrors.sort((a, b) => a.line - b.line);
+  await enrollInProgram(created.map((u) => u.id)); // only participants are enrolled
 
   const delivering = emailDeliveryConfigured();
   const inviteLinks: ImportUsersResult["inviteLinks"] = [];

@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "@/server/db";
 import { recordAudit } from "@/server/audit";
-import { loginSchema, portalSchema } from "@/modules/identity/domain/credentials";
+import { credentialsSchema, portalSchema } from "@/modules/identity/domain/credentials";
 import { canUsePortal } from "@/modules/identity/domain/role";
 import { authConfig } from "./auth.config";
 
@@ -39,7 +39,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Credentials({
       credentials: { email: {}, password: {}, portal: {} },
       async authorize(raw) {
-        const credentials = loginSchema.safeParse(raw);
+        const credentials = credentialsSchema.safeParse(raw);
         const portal = portalSchema.safeParse(raw.portal);
         if (!credentials.success || !portal.success) {
           authLog("invalid input", { emailValid: credentials.success, portal: raw.portal });

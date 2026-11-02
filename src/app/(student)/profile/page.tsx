@@ -38,7 +38,7 @@ export default async function StudentProfilePage() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{fullName(profile)}</h1>
             <p className="text-sm text-muted-foreground">
-              {[profile.department, profile.email].filter(Boolean).join(" · ")} · {formatDate(profile.createdAt)} tarihinden beri katılımcı
+              {[profile.school, profile.department, profile.email].filter(Boolean).join(" · ")} · {formatDate(profile.createdAt)} tarihinden beri katılımcı
             </p>
           </div>
         </CardContent>
@@ -95,7 +95,7 @@ export default async function StudentProfilePage() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
         <StudentProfileForm
-          defaults={{ name: profile.name, surname: profile.surname, bio: profile.bio, goals: profile.goals, department: profile.department, city: profile.city }}
+          defaults={{ name: profile.name, surname: profile.surname, bio: profile.bio, goals: profile.goals, school: profile.school, department: profile.department, city: profile.city }}
         />
         <PasswordForm />
       </div>

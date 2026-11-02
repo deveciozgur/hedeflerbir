@@ -21,6 +21,21 @@ export const teamBookingSchema = z.object({
 });
 export type TeamBookingInput = z.input<typeof teamBookingSchema>;
 
+/** Admin defines a session between a team and a mentor at any date/time (created PENDING, approved separately). */
+export const sessionScheduleSchema = z.object({
+  mentorId: z.string().min(1, { error: "Bir mentor seçin." }),
+  teamId: z.string().min(1, { error: "Bir ekip seçin." }),
+  /** ISO instant built from the Istanbul date/time inputs on the client. */
+  start: z.iso.datetime({ offset: true, error: "Geçerli bir tarih ve saat seçin." }),
+  durationMinutes: z.coerce.number().int().min(15, { error: "En az 15 dakika." }).max(240, { error: "En fazla 4 saat." }),
+  meetingLink: z
+    .union([z.literal(""), z.url({ protocol: /^https?$/, error: "Geçerli bir bağlantı girin." })])
+    .transform((v) => v || null),
+  notes: z.string().trim().max(1000, { error: "Not en fazla 1000 karakter olabilir." }),
+  adminNotes: z.string().trim().max(1000, { error: "Not en fazla 1000 karakter olabilir." }),
+});
+export type SessionScheduleInput = z.input<typeof sessionScheduleSchema>;
+
 export const appointmentIdSchema = z.string().min(1);
 
 export const weeklyAvailabilitySchema = z.object({

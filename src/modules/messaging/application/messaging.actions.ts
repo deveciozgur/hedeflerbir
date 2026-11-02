@@ -21,12 +21,10 @@ export async function startThreadAction(input: unknown): Promise<ActionResult<{ 
 
   const receiver = await db.user.findFirst({
     where: { id: parsed.data.receiverId, isActive: true },
-    select: { id: true, role: true, teamId: true },
+    select: { id: true, role: true },
   });
   if (!receiver || receiver.id === sender.id) return fail("Alıcı bulunamadı.");
-  const senderTeamId = sender.role === "STUDENT" ? (await db.user.findUnique({ where: { id: sender.id }, select: { teamId: true } }))?.teamId : null;
-  const sameTeam = Boolean(senderTeamId && senderTeamId === receiver.teamId);
-  if (!canMessage(sender.role, receiver.role, { sameTeam })) return fail("Bu kullanıcıya mesaj gönderme yetkiniz yok.");
+  if (!canMessage(sender.role, receiver.role)) return fail("Bu kullanıcıya mesaj gönderme yetkiniz yok.");
 
   const thread = await db.$transaction(async (tx) => {
     const root = await tx.message.create({

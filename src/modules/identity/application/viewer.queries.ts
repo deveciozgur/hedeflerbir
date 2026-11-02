@@ -13,6 +13,8 @@ export interface Viewer {
   role: Role;
   avatarUrl: string | null;
   unreadNotifications: number;
+  /** Temporary password handed out by an admin: the shell asks the user to change it. */
+  mustChangePassword: boolean;
 }
 
 /** Authorizes the request for the given roles and loads the shell's viewer model. */
@@ -27,6 +29,7 @@ export const getViewer = cache(async (...roles: Role[]): Promise<Viewer> => {
       email: true,
       role: true,
       avatarUrl: true,
+      mustChangePassword: true,
       _count: { select: { notifications: { where: { readAt: null } } } },
     },
   });
@@ -41,5 +44,6 @@ export const getViewer = cache(async (...roles: Role[]): Promise<Viewer> => {
     role: user.role,
     avatarUrl: user.avatarUrl,
     unreadNotifications: user._count.notifications,
+    mustChangePassword: user.mustChangePassword,
   };
 });

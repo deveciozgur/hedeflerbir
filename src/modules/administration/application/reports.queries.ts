@@ -63,7 +63,7 @@ export async function getProgramReports(now: Date = new Date()): Promise<Program
     const row = byTeam.get(team) ?? { team, completed: 0, cancelled: 0, upcoming: 0 };
     if (a.status === "COMPLETED") row.completed++;
     else if (a.status === "CANCELLED") row.cancelled++;
-    else if (a.slot.endTime > now) row.upcoming++;
+    else if (a.status === "CONFIRMED" && a.slot.endTime > now) row.upcoming++;
     byTeam.set(team, row);
   }
 
@@ -81,7 +81,7 @@ export async function getProgramReports(now: Date = new Date()): Promise<Program
     mentoring: {
       byTeam: [...byTeam.values()].sort((a, b) => b.completed - a.completed || a.team.localeCompare(b.team, "tr")),
       completed: appointments.filter((a) => a.status === "COMPLETED").length,
-      total: appointments.filter((a) => a.status !== "CANCELLED").length,
+      total: appointments.filter((a) => a.status === "CONFIRMED" || a.status === "COMPLETED").length,
     },
     expertise: { instructors: expertiseOf("INSTRUCTOR"), mentors: expertiseOf("MENTOR") },
   };

@@ -31,19 +31,20 @@ export async function loginAction(portal: Portal, input: unknown, callbackUrl?: 
   const parsed = loginSchema.safeParse(input);
   if (!parsed.success) return fail("Lütfen alanları kontrol edin.", z.flattenError(parsed.error).fieldErrors);
 
+  const { email, password } = parsed.data;
   try {
-    await signIn("credentials", { ...parsed.data, portal, redirect: false });
+    await signIn("credentials", { email, password, portal, redirect: false });
   } catch (error) {
     if (error instanceof CredentialsSignin) return fail(ERROR_MESSAGES[error.code] ?? ERROR_MESSAGES.default!);
     if (error instanceof AuthError) {
-      console.error("[auth] signIn failed", { type: error.type, email: parsed.data.email, portal });
+      console.error("[auth] signIn failed", { type: error.type, email, portal });
       return fail("Giriş sırasında bir sorun oluştu. Lütfen tekrar deneyin.");
     }
     throw error;
   }
 
-  // Credentials were just verified by authorize(); this only reads the role for routing.
-  const user = await db.user.findUnique({ where: { email: parsed.data.email }, select: { role: true } });
+  // Credentials were just verified by authorize(); record the KVKK consent and read the role for routing.
+  const user = await db.user.update({ where: { email }, data: { kvkkConsentAt: new Date() }, select: { role: true } }).catch(() => null);
   redirect(user ? destinationFor(user.role, callbackUrl) : "/");
 }
 

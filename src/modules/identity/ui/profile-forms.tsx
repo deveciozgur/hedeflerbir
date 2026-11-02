@@ -87,6 +87,9 @@ export function StudentProfileForm({ defaults }: { defaults: StudentProfileInput
             <Input id="surname" autoComplete="family-name" {...describe("surname", errors.surname)} {...register("surname")} />
           </FormField>
         </div>
+        <FormField id="school" label="Okuduğun okul" error={errors.school?.message}>
+          <Input id="school" placeholder="Örn. Ege Üniversitesi" {...describe("school", errors.school)} {...register("school")} />
+        </FormField>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField id="department" label="Okuduğun bölüm" error={errors.department?.message}>
             <Input id="department" placeholder="Örn. Bilgisayar Mühendisliği" {...describe("department", errors.department)} {...register("department")} />

@@ -58,7 +58,7 @@ export async function getProgramOverview(now: Date = new Date()): Promise<Progra
       },
     }),
     db.appointment.findMany({
-      where: { status: { not: "CANCELLED" }, slot: { startTime: { gte: start, lt: end } } },
+      where: { status: { in: ["CONFIRMED", "COMPLETED"] }, slot: { startTime: { gte: start, lt: end } } },
       orderBy: { slot: { startTime: "asc" } },
       select: {
         id: true,
