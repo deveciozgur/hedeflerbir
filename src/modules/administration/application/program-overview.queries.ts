@@ -25,6 +25,8 @@ export interface WeekDay {
 
 export interface ProgramOverview {
   stats: { participants: number; teams: number; heldTrainings: number; approvedSessions: number };
+  /** Same metrics added in the last 7 days (real counts, for the KPI trend pills). */
+  weekly: { participants: number; teams: number; heldTrainings: number; approvedSessions: number };
   trainings: { held: number; total: number; percent: number };
   week: WeekDay[];
   recentTeams: Array<{ id: string; name: string; memberCount: number; representative: string | null }>;
@@ -32,6 +34,9 @@ export interface ProgramOverview {
   pendingSessions: Array<{ id: string; team: string; mentor: string; start: Date }>;
   pendingCount: number;
   teamsWithoutRepresentative: number;
+  /** Suspended accounts (isActive = false), for the quick reactivate list. */
+  suspended: Array<{ id: string; name: string; email: string }>;
+  suspendedCount: number;
 }
 
 /** Monday 00:00 (Europe/Istanbul) of the week containing `now`, as a UTC instant. */
@@ -48,7 +53,26 @@ export async function getProgramOverview(now: Date = new Date()): Promise<Progra
 
   // Draft programmes (e.g. the hidden self-paced course) aren't part of the live calendar.
   const live = { course: { status: { not: "DRAFT" as const } } };
-  const [total, held, trainings, sessions, participants, teams, approvedSessions, recentTeams, pending, pendingCount, teamsWithoutRepresentative] = await Promise.all([
+  const weekAgo = new Date(now.getTime() - 7 * DAY);
+  const [
+    total,
+    held,
+    trainings,
+    sessions,
+    participants,
+    teams,
+    approvedSessions,
+    recentTeams,
+    pending,
+    pendingCount,
+    teamsWithoutRepresentative,
+    newParticipants,
+    newTeams,
+    heldThisWeek,
+    approvedThisWeek,
+    suspended,
+    suspendedCount,
+  ] = await Promise.all([
     db.courseSession.count({ where: live }),
     db.courseSession.count({ where: { ...live, scheduleDate: { lt: now } } }),
     db.courseSession.findMany({
@@ -95,6 +119,12 @@ export async function getProgramOverview(now: Date = new Date()): Promise<Progra
     }),
     db.appointment.count({ where: { status: "PENDING" } }),
     db.team.count({ where: { representativeId: null } }),
+    db.user.count({ where: { role: "STUDENT", isActive: true, createdAt: { gte: weekAgo } } }),
+    db.team.count({ where: { createdAt: { gte: weekAgo } } }),
+    db.courseSession.count({ where: { ...live, scheduleDate: { gte: weekAgo, lt: now } } }),
+    db.appointment.count({ where: { status: { in: ["CONFIRMED", "COMPLETED"] }, approvedAt: { gte: weekAgo } } }),
+    db.user.findMany({ where: { isActive: false }, orderBy: { updatedAt: "desc" }, take: 3, select: { id: true, name: true, surname: true, email: true } }),
+    db.user.count({ where: { isActive: false } }),
   ]);
 
   const items: WeekItem[] = [
@@ -126,11 +156,14 @@ export async function getProgramOverview(now: Date = new Date()): Promise<Progra
 
   return {
     stats: { participants, teams, heldTrainings: held, approvedSessions },
+    weekly: { participants: newParticipants, teams: newTeams, heldTrainings: heldThisWeek, approvedSessions: approvedThisWeek },
     trainings: { held, total, percent: trainingCompletion(held, total) },
     week,
     recentTeams: recentTeams.map((t) => ({ id: t.id, name: t.name, memberCount: t._count.members, representative: t.representative ? fullName(t.representative) : null })),
     pendingSessions: pending.map((p) => ({ id: p.id, team: p.team?.name ?? fullName(p.student), mentor: fullName(p.mentor), start: p.slot.startTime })),
     pendingCount,
     teamsWithoutRepresentative,
+    suspended: suspended.map((u) => ({ id: u.id, name: fullName(u), email: u.email })),
+    suspendedCount,
   };
 }

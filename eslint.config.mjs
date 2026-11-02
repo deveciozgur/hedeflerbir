@@ -5,7 +5,8 @@ import { FlatCompat } from "@eslint/eslintrc";
 const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta.url)) });
 
 const config = [
-  { ignores: [".next/**", "node_modules/**", "next-env.d.ts"] },
+  // .claude/skills holds vendored third-party skills (design-taste-frontend scripts), not app code.
+  { ignores: [".next/**", "node_modules/**", "next-env.d.ts", ".claude/skills/**", ".taste-skill/**"] },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {

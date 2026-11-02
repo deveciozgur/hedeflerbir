@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ProgressRing } from "@/components/ui/progress-ring";
 import { SnapRail } from "@/components/ui/snap-rail";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { formatCountdown, formatDate, formatDateTime, formatRelative, formatTime, formatTimeRange, relativeDayLabel } from "@/lib/format";
@@ -15,7 +14,7 @@ import type { StudentAppointment } from "@/modules/mentoring/application/mentor-
 import type { MyTeam } from "@/modules/people/application/people.queries";
 import type { StudentTrainingCard } from "../application/trainings.queries";
 import { sessionCalendarEvent, sessionIcsHref } from "../domain/calendar-event";
-import { trainingCompletion, trainingTiming } from "../domain/trainings";
+import { trainingTiming } from "../domain/trainings";
 
 const rowLink =
   "rounded-lg outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
@@ -23,58 +22,6 @@ const rowLink =
 const linkClass = "inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring";
 
 const endOf = (t: Pick<StudentTrainingCard, "scheduleDate" | "durationMinutes">) => new Date(t.scheduleDate.getTime() + t.durationMinutes * 60_000);
-
-// ─────────────────────────────── Hero (8) ───────────────────────────────
-
-interface StudentHeroProps {
-  firstName: string;
-  trainings: { completed: number; total: number };
-  attendance: { present: number; counted: number };
-  badges: { earned: number; total: number };
-  openAssignments: number;
-}
-
-function motivation(percent: number, total: number): string {
-  if (total === 0) return "Canlı eğitimler takvime eklendiğinde ilerlemen burada görünecek.";
-  if (percent >= 80) return "Harika gidiyorsun; programın neredeyse tamamına katıldın.";
-  if (percent >= 50) return "İyi bir tempodasın. Birkaç eğitim daha ile rozetlerini tamamlayabilirsin.";
-  if (percent > 0) return "Güzel bir başlangıç. Canlı eğitimlere katıldıkça rozetlerin açılacak.";
-  return "İlk canlı eğitimine katıldığında yolculuğun burada başlayacak.";
-}
-
-/** Greeting with the attendance ring: attended live trainings over all programme trainings (from the roll calls). */
-export function StudentHero({ firstName, trainings, attendance, badges, openAssignments }: StudentHeroProps) {
-  const percent = trainingCompletion(trainings.completed, trainings.total);
-  const facts = [
-    { label: "Tamamlanan eğitim", value: `${trainings.completed}/${trainings.total}` },
-    { label: "Yoklama", value: `${attendance.present}/${attendance.counted}` },
-    { label: "Rozet", value: `${badges.earned}/${badges.total}` },
-    { label: "Açık ödev", value: String(openAssignments) },
-  ];
-
-  return (
-    <Card className="h-full justify-center py-0">
-      <div className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:gap-8">
-        <ProgressRing value={percent} size={112} strokeWidth={8} label="Canlı eğitim devam oranı" />
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <p className="font-mono text-xs font-medium text-brand-soft tabular-nums">Devam %{percent}</p>
-            <h1 className="text-lg font-semibold tracking-tight text-balance sm:text-xl">Tekrar hoş geldin, {firstName}</h1>
-            <p className="max-w-[60ch] text-sm text-pretty text-muted-foreground">{motivation(percent, trainings.total)}</p>
-          </div>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
-            {facts.map((fact) => (
-              <div key={fact.label} className="flex flex-col">
-                <dt className="text-xs text-subtle">{fact.label}</dt>
-                <dd className="font-mono text-lg font-semibold tracking-tight tabular-nums">{fact.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </div>
-    </Card>
-  );
-}
 
 // ──────────────────────── Next live session (4) ────────────────────────
 
@@ -144,7 +91,8 @@ export function NextSessionCard({ next }: { next: StudentTrainingCard | null }) 
 function trainingStatus(training: StudentTrainingCard) {
   if (training.completed) return { label: "Tamamlandı", icon: CheckCircle2, className: "text-success" };
   if (trainingTiming(training.scheduleDate, training.durationMinutes) === "live") return { label: "Şu an canlı", icon: Radio, className: "text-destructive" };
-  return { label: "Tamamlanmadı", icon: CircleDashed, className: "text-muted-foreground" };
+  if (trainingTiming(training.scheduleDate, training.durationMinutes) === "upcoming") return { label: "Yaklaşan", icon: Hourglass, className: "text-muted-foreground" };
+  return { label: "Katılmadı", icon: CircleDashed, className: "text-magenta-soft" };
 }
 
 type RailEntry =
@@ -277,11 +225,14 @@ export function TeamMentoringCard({ team, session }: { team: MyTeam | null; sess
               <UserAvatar user={session.mentor} className="size-9" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{fullName(session.mentor)}</p>
-                <p className="font-mono text-xs text-muted-foreground tabular-nums">
-                  {formatDateTime(session.startTime)} - {formatTime(session.endTime)}
-                </p>
+                <p className="text-xs text-subtle">Onaylı mentorluk seansı</p>
               </div>
-              <Badge variant="warning" className="shrink-0 font-mono tabular-nums">
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-mono text-xs tabular-nums">
+                {formatDateTime(session.startTime)} - {formatTime(session.endTime)}
+              </span>
+              <Badge variant="warning" className="font-mono tabular-nums">
                 {formatCountdown(session.startTime)}
               </Badge>
             </div>

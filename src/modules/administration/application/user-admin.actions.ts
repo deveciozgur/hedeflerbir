@@ -103,7 +103,7 @@ export async function setUserActiveAction(input: unknown): Promise<ActionResult>
   // Suspended users are signed out on their next request: getViewer() redirects inactive accounts to /logout.
   await db.user.update({ where: { id: target.id }, data: { isActive: parsed.data.active } });
   await recordAudit({ action: parsed.data.active ? "user.activated" : "user.deactivated", actorId: admin.id, targetType: "user", targetId: target.id });
-  revalidatePath("/admin/users");
+  revalidatePath("/admin", "layout");
   return ok(undefined);
 }
 

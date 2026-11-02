@@ -30,7 +30,7 @@ function applyPatch(roster: RosterEntry[], patch: RosterPatch): RosterEntry[] {
 }
 
 /** Inline preview for PDFs and images; other file types only offer the download button. */
-function SubmissionPreview({ submissionId, fileName }: { submissionId: string; fileName: string | null }) {
+export function SubmissionPreview({ submissionId, fileName }: { submissionId: string; fileName: string | null }) {
   const preview = previewOf(fileName);
   if (!preview) return null;
   const src = `/api/files/submissions/${submissionId}?inline=1`;

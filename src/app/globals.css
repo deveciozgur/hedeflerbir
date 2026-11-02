@@ -3,9 +3,9 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * HedeflerBir design tokens (v2) - zinc neutrals, teal #008374 primary with magenta / cyan / amber
- * accents, two themes. Light: #FAFAFA (zinc-50) page, opaque white cards with a hairline border and an xs shadow.
- * Dark: zinc-950 page, zinc-900/50 cards over a blur with a zinc-800/70 border and no shadow.
+ * HedeflerBir design tokens (v3) - slate neutrals, teal #008374 primary with magenta / cyan / amber
+ * accents, two themes. Light: #F8FAFC (slate-50) page, opaque white cards with a hairline border and an xs shadow.
+ * Dark: #0B0F17 navy page, slate-900/60 cards over a blur with a slate-800/80 border and no shadow.
  * Light is the default (:root); `.dark` on <html> is set by next-themes before first paint.
  * Text tokens (foreground, muted, subtle, *-soft, status) meet WCAG AAA (7:1) on both the page and card
  * surfaces of each theme; brand fills (#008374 with white text, 4.7:1) are AA, AAA only for large text.
@@ -14,34 +14,34 @@
   color-scheme: light;
 
   /* Surfaces */
-  --background: oklch(0.985 0 0);                      /* zinc-50 #fafafa: page, never raw white */
+  --background: #f8fafc;                               /* slate-50: page, never raw white */
   --card: oklch(1 0 0);                                /* white */
-  --card-foreground: oklch(0.141 0.005 285.823);
+  --card-foreground: #020617;
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --accent: oklch(0.967 0.001 286.375);                /* zinc-100 hover surface */
-  --accent-foreground: oklch(0.141 0.005 285.823);
-  --muted: oklch(0.967 0.001 286.375);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.274 0.006 286.033);
-  --surface-raised: oklch(0.985 0 0);                  /* zinc-50: chips, pills, choice buttons */
+  --popover-foreground: #020617;
+  --accent: #f1f5f9;                                   /* slate-100 hover surface */
+  --accent-foreground: #020617;
+  --muted: #f1f5f9;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #1e293b;
+  --surface-raised: #f8fafc;                           /* slate-50: chips, pills, choice buttons */
   --surface-sunken: oklch(1 0 0);                      /* inputs, inset rows */
-  --track: oklch(0.92 0.004 286.32);                   /* zinc-200: progress tracks, skeletons */
+  --track: #e2e8f0;                                    /* slate-200: progress tracks, skeletons */
   --chip-active: oklch(1 0 0);                         /* selected segmented-control chip */
-  --overlay: oklch(0.141 0.005 285.823 / 0.35);
-  --shadow: oklch(0.552 0.016 285.938 / 0.18);
+  --overlay: rgb(2 6 23 / 0.35);
+  --shadow: rgb(15 23 42 / 0.08);
 
   /* Text */
-  --foreground: oklch(0.141 0.005 285.823);            /* zinc-950 ~19:1 */
-  --muted-foreground: oklch(0.40 0.016 285.9);         /* ~8.9:1 on the page (AAA) */
-  --subtle: oklch(0.45 0.017 285.8);                   /* ~7.2:1 on the page (AAA) */
+  --foreground: #020617;                               /* slate-950 ~19:1 */
+  --muted-foreground: oklch(0.40 0.03 257);            /* ~8.8:1 on the page (AAA) */
+  --subtle: oklch(0.45 0.03 257);                      /* ~7.1:1 on the page (AAA) */
 
   /* Lines */
-  --border: oklch(0.92 0.004 286.32 / 0.8);            /* zinc-200/80 */
-  --border-strong: oklch(0.871 0.006 286.286);         /* zinc-300: card hover */
-  --border-hover: oklch(0.705 0.015 286.067);          /* zinc-400 */
-  --input: oklch(0.871 0.006 286.286);
-  --ring: oklch(0.552 0.016 285.938);                  /* zinc-500 focus ring, >3:1 on white */
+  --border: rgb(226 232 240 / 0.8);                    /* slate-200/80 */
+  --border-strong: #cbd5e1;                            /* slate-300: card hover */
+  --border-hover: #94a3b8;                             /* slate-400 */
+  --input: #cbd5e1;
+  --ring: #64748b;                                     /* slate-500 focus ring, >3:1 on white */
 
   /* HedeflerBir brand: primary teal #008374; magenta / cyan / amber are the logo accents. */
   --brand: #008374;                                    /* white text 4.7:1 */
@@ -60,10 +60,10 @@
   --destructive: oklch(0.44 0.19 27.5);                /* ~7.9:1 (AAA) */
   --destructive-solid: oklch(0.577 0.245 27.325);      /* red-600 fill, white text ~4.8:1 */
 
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
+  --sidebar: #f8fafc;
+  --sidebar-foreground: #020617;
   --sidebar-accent: oklch(1 0 0);
-  --sidebar-border: oklch(0.92 0.004 286.32);
+  --sidebar-border: rgb(226 232 240 / 0.8);
 
   /* Motion: one curve for every overlay (modal, dropdown, popover, tooltip). */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -72,32 +72,32 @@
 .dark {
   color-scheme: dark;
 
-  --background: oklch(0.141 0.005 285.823);            /* zinc-950 */
-  --card: oklch(0.21 0.006 285.885 / 0.5);             /* zinc-900/50, paired with backdrop-blur */
-  --card-foreground: oklch(0.967 0.001 286.375);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.967 0.001 286.375);
-  --accent: oklch(0.244 0.006 285.96);                 /* "zinc-850" hover surface */
-  --accent-foreground: oklch(0.967 0.001 286.375);
-  --muted: oklch(0.274 0.006 286.033);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.92 0.004 286.32);
-  --surface-raised: oklch(0.21 0.006 285.885 / 0.6);
-  --surface-sunken: oklch(0.141 0.005 285.823 / 0.6);
-  --track: oklch(0.274 0.006 286.033);                 /* zinc-800 */
-  --chip-active: oklch(0.274 0.006 286.033);
-  --overlay: oklch(0.141 0.005 285.823 / 0.7);
-  --shadow: oklch(0.141 0.005 285.823 / 0.6);
+  --background: #0b0f17;                               /* deep SaaS navy */
+  --card: rgb(15 23 42 / 0.6);                         /* slate-900/60, paired with backdrop-blur */
+  --card-foreground: #f1f5f9;
+  --popover: #0f172a;
+  --popover-foreground: #f1f5f9;
+  --accent: #172033;                                   /* between slate-900 and -800: hover surface */
+  --accent-foreground: #f1f5f9;
+  --muted: #1e293b;
+  --secondary: #1e293b;
+  --secondary-foreground: #e2e8f0;
+  --surface-raised: rgb(15 23 42 / 0.6);
+  --surface-sunken: rgb(11 15 23 / 0.6);
+  --track: #1e293b;                                    /* slate-800 */
+  --chip-active: #1e293b;
+  --overlay: rgb(11 15 23 / 0.7);
+  --shadow: rgb(0 0 0 / 0.5);
 
-  --foreground: oklch(0.967 0.001 286.375);            /* zinc-100 ~17:1 */
-  --muted-foreground: oklch(0.80 0.01 286);            /* ~10:1 on cards (AAA) */
-  --subtle: oklch(0.72 0.014 286);                     /* ~7.5:1 on cards (AAA) */
+  --foreground: #f1f5f9;                               /* slate-100 ~17:1 */
+  --muted-foreground: oklch(0.80 0.02 257);            /* ~9.8:1 on cards (AAA) */
+  --subtle: oklch(0.73 0.02 257);                      /* ~7.7:1 on cards (AAA) */
 
-  --border: oklch(0.274 0.006 286.033 / 0.7);          /* zinc-800/70 */
-  --border-strong: oklch(0.37 0.013 285.805);          /* zinc-700: card hover */
-  --border-hover: oklch(0.552 0.016 285.938);          /* zinc-500 */
-  --input: oklch(0.274 0.006 286.033);
-  --ring: oklch(0.705 0.015 286.067);                  /* zinc-400 */
+  --border: rgb(30 41 59 / 0.8);                       /* slate-800/80 */
+  --border-strong: #334155;                            /* slate-700: card hover */
+  --border-hover: #64748b;                             /* slate-500 */
+  --input: #1e293b;
+  --ring: #94a3b8;                                    /* slate-400 */
 
   --brand: #00a090;                                    /* lifted teal for dark surfaces */
   --brand-soft: #5fd4c4;                               /* teal text on dark ~9:1 */
@@ -114,10 +114,10 @@
   --destructive: oklch(0.76 0.16 22.2);                /* ~7.9:1 (AAA) */
   --destructive-solid: oklch(0.577 0.245 27.325);
 
-  --sidebar: oklch(0.141 0.005 285.823);
-  --sidebar-foreground: oklch(0.967 0.001 286.375);
-  --sidebar-accent: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.274 0.006 286.033 / 0.8);
+  --sidebar: #0b0f17;
+  --sidebar-foreground: #f1f5f9;
+  --sidebar-accent: #0f172a;
+  --sidebar-border: rgb(30 41 59 / 0.8);
 }
 
 @theme inline {
@@ -240,8 +240,8 @@
     --card: oklch(1 0 0);
   }
   .dark {
-    --card: oklch(0.21 0.006 285.885);
-    --surface-raised: oklch(0.21 0.006 285.885);
+    --card: #0f172a;
+    --surface-raised: #0f172a;
   }
 }
 

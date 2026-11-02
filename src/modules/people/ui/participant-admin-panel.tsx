@@ -5,6 +5,8 @@ import { Award, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BADGES } from "@/modules/engagement/domain/badges";
+import { setUserActiveAction } from "@/modules/administration/application/user-admin.actions";
+import { ConfirmActionButton } from "@/components/ui/confirm-action-button";
 import { setBadgeAction } from "../application/teams.actions";
 
 /** Admin control inside a participant's detail modal: manual badge awards (teams are managed on /admin/teams). */
@@ -27,6 +29,21 @@ export function ParticipantAdminPanel({ userId, badgeCodes }: { userId: string; 
 
   return (
     <section aria-label="Yönetici işlemleri" className="flex flex-col gap-4 border-t border-border pt-5">
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+        <p className="text-sm">
+          <span className="font-medium">Hesap</span> <span className="text-muted-foreground">· aktif</span>
+        </p>
+        <ConfirmActionButton
+          variant="outline"
+          label="Askıya al"
+          title="Katılımcı askıya alınsın mı?"
+          description="Hesap girişe kapanır ve açık oturumlar kapatılır. Ana sayfadaki Askıdaki hesaplar listesinden yeniden etkinleştirebilirsin."
+          confirmLabel="Askıya al"
+          successMessage="Hesap askıya alındı"
+          destructive
+          action={setUserActiveAction.bind(null, { userId, active: false })}
+        />
+      </div>
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 flex items-center gap-1.5 text-sm font-medium">
           <Award className="size-4 text-muted-foreground" aria-hidden /> Rozetler

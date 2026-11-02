@@ -83,9 +83,15 @@ export async function listParticipantsForAdmin(): Promise<AdminParticipant[]> {
       team: { select: { name: true, focusArea: true } },
       representedTeam: { select: { id: true } },
       badges: { select: { badge: { select: { code: true } } } },
+      attendances: {
+        where: { session: { course: { status: { not: "DRAFT" } } } },
+        orderBy: { session: { scheduleDate: "desc" } },
+        take: 12,
+        select: { status: true, session: { select: { title: true, scheduleDate: true } } },
+      },
     },
   });
-  return rows.map(({ email, profile, team, representedTeam, badges, ...row }) => {
+  return rows.map(({ email, profile, team, representedTeam, badges, attendances, ...row }) => {
     const links = (profile?.socialLinks ?? {}) as Record<string, unknown>;
     return {
       ...toSummary({ ...row, profile }),
@@ -95,6 +101,7 @@ export async function listParticipantsForAdmin(): Promise<AdminParticipant[]> {
       socialLinks: Object.fromEntries(Object.entries(links).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1] !== "")),
       team,
       isRepresentative: representedTeam !== null,
+      attendance: attendances.map((a) => ({ title: a.session.title, date: a.session.scheduleDate, status: a.status })),
       badgeCodes: badges.map((b) => b.badge.code),
     };
   });

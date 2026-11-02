@@ -109,6 +109,9 @@ export const NAVIGATION: Record<ShellVariant, NavSection[]> = {
   ],
 };
 
+/** Cookie that remembers a collapsed desktop sidebar (read on the server so the first paint has the right width). */
+export const SIDEBAR_COOKIE = "hb-sidebar";
+
 export const SHELL_LABEL: Record<ShellVariant, string> = {
   student: "Katılımcı",
   instructor: "Eğitmen Portalı",

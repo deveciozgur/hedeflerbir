@@ -35,3 +35,9 @@ export async function enrollInProgram(studentIds?: string[]): Promise<void> {
   if (students.length === 0) return;
   await db.enrollment.createMany({ data: students.map((s) => ({ studentId: s.id, courseId: program.id })), skipDuplicates: true });
 }
+
+/** The programme's name for the shell header ("HedeflerBir 2026 Programı"); null before the first training. */
+export async function getProgramLabel(): Promise<string | null> {
+  const program = await db.course.findUnique({ where: { slug: PROGRAM_SLUG }, select: { title: true } });
+  return program?.title ?? null;
+}

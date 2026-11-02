@@ -9,7 +9,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatTile } from "@/components/ui/stat-tile";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { ConfirmActionButton } from "@/components/ui/confirm-action-button";
 import { getProgramOverview } from "@/modules/administration/application/program-overview.queries";
+import { setUserActiveAction } from "@/modules/administration/application/user-admin.actions";
 import { ImportUsersDialog } from "@/modules/administration/ui/import-users-dialog";
 import { WeekCalendar } from "@/modules/administration/ui/week-calendar";
 import { AnnouncementDialog } from "@/modules/engagement/ui/announcement-dialog";
@@ -21,6 +23,9 @@ import { listTeamCandidates, listTeams } from "@/modules/people/application/team
 import { NewTeamButton } from "@/modules/people/ui/team-manager";
 
 export const metadata: Metadata = { title: "Ana Sayfa" };
+
+/** "+3 bu hafta" pill; nothing new reads as neutral, not as a fake zero growth badge. */
+const weekTrend = (n: number) => ({ label: n > 0 ? `+${n} bu hafta` : "bu hafta yok", tone: n > 0 ? ("good" as const) : ("neutral" as const) });
 
 const linkClass = "inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring";
 const rowClass =
@@ -35,7 +40,7 @@ export default async function AdminHomePage() {
     listTeams(),
     listTeamCandidates(),
   ]);
-  const actionCount = o.pendingCount + o.teamsWithoutRepresentative;
+  const actionCount = o.pendingCount + o.teamsWithoutRepresentative + o.suspendedCount;
 
   return (
     <div className="flex flex-col gap-8">
@@ -63,10 +68,10 @@ export default async function AdminHomePage() {
       <BentoGrid>
         <section aria-label="Ana metrikler" className="contents">
           <div className={BENTO_SPAN.kpi}>
-            <StatTile icon={Users} tone="brand" label="Aktif katılımcı" value={String(o.stats.participants)} />
+            <StatTile icon={Users} tone="brand" label="Aktif katılımcı" value={String(o.stats.participants)} trend={weekTrend(o.weekly.participants)} />
           </div>
           <div className={BENTO_SPAN.kpi}>
-            <StatTile icon={UsersRound} tone="cyan" label="Kurulan ekip" value={String(o.stats.teams)} />
+            <StatTile icon={UsersRound} tone="cyan" label="Kurulan ekip" value={String(o.stats.teams)} trend={weekTrend(o.weekly.teams)} hint={o.teamsWithoutRepresentative > 0 ? `${o.teamsWithoutRepresentative} ekibin temsilcisi yok` : "Tüm ekiplerin temsilcisi var"} />
           </div>
           <div className={BENTO_SPAN.kpi}>
             <StatTile
@@ -74,11 +79,12 @@ export default async function AdminHomePage() {
               tone="brand"
               label="Gerçekleşen canlı eğitim"
               value={`${o.trainings.held}/${o.trainings.total}`}
+              trend={weekTrend(o.weekly.heldTrainings)}
               hint={`Programın %${o.trainings.percent} kadarı tamamlandı`}
             />
           </div>
           <div className={BENTO_SPAN.kpi}>
-            <StatTile icon={Sparkles} tone="amber" label="Onaylanan mentorluk seansı" value={String(o.stats.approvedSessions)} hint={o.pendingCount > 0 ? `${o.pendingCount} seans onay bekliyor` : "Onay bekleyen yok"} />
+            <StatTile icon={Sparkles} tone="amber" label="Onaylanan mentorluk seansı" value={String(o.stats.approvedSessions)} trend={weekTrend(o.weekly.approvedSessions)} hint={o.pendingCount > 0 ? `${o.pendingCount} seans onay bekliyor` : "Onay bekleyen yok"} />
           </div>
         </section>
 
@@ -98,7 +104,7 @@ export default async function AdminHomePage() {
             </CardHeader>
             <CardContent>
               {actionCount === 0 ? (
-                <p className="pb-1 text-sm text-muted-foreground">Onay bekleyen seans ya da temsilcisiz ekip yok.</p>
+                <p className="pb-1 text-sm text-muted-foreground">Onay bekleyen seans, temsilcisiz ekip ya da askıdaki hesap yok.</p>
               ) : (
                 <ul className="-mx-2 flex flex-col">
                   {o.pendingSessions.map((p) => (
@@ -135,6 +141,32 @@ export default async function AdminHomePage() {
                   ) : null}
                 </ul>
               )}
+              {o.suspended.length > 0 ? (
+                <div className="mt-2 flex flex-col gap-1 border-t border-border pt-3">
+                  <p className="text-xs font-medium text-subtle">
+                    Askıdaki hesaplar <span className="font-mono tabular-nums">{o.suspendedCount}</span>
+                  </p>
+                  <ul className="flex flex-col">
+                    {o.suspended.map((u) => (
+                      <li key={u.id} className="flex items-center justify-between gap-3 py-1.5">
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm">{u.name}</span>
+                          <span className="block truncate text-xs text-subtle">{u.email}</span>
+                        </span>
+                        <ConfirmActionButton
+                          variant="outline"
+                          label="Etkinleştir"
+                          title="Hesap yeniden etkinleştirilsin mi?"
+                          description={`${u.name} tekrar giriş yapabilecek.`}
+                          confirmLabel="Etkinleştir"
+                          successMessage="Hesap etkinleştirildi"
+                          action={setUserActiveAction.bind(null, { userId: u.id, active: true })}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               <Link href="/admin/users" className={cn(rowClass, "-mx-2 mt-1 border-t border-border pt-3")}>
                 <span className="grid size-7 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground" aria-hidden>
                   <UserRoundX className="size-3.5" />

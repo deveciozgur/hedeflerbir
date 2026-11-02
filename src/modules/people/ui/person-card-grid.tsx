@@ -12,7 +12,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDate } from "@/lib/format";
 import { cn, fullName, initials, splitTags } from "@/lib/utils";
+import { ATTENDANCE_LABELS } from "@/modules/learning/domain/attendance";
 import { ROLE_LABELS } from "@/modules/identity/domain/role";
 import { startThreadAction } from "@/modules/messaging/application/messaging.actions";
 import { avatarTone, SOCIAL_LABELS, type PersonRecord, type PersonSummary } from "../domain/person";
@@ -170,6 +172,31 @@ function PersonDetails({ person }: { person: PersonSummary | PersonRecord }) {
         <section aria-label="Ekibin çözmek istediği sorun" className="flex items-start gap-2.5 rounded-lg bg-muted/40 p-3 text-sm">
           <Target className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
           <p className="leading-relaxed text-muted-foreground">{record.team.focusArea}</p>
+        </section>
+      ) : null}
+      {record ? (
+        <section aria-label="Yoklama geçmişi" className="flex flex-col gap-2">
+          <h3 className="flex items-baseline justify-between text-xs font-medium text-subtle">
+            Yoklama geçmişi
+            <span className="font-mono tabular-nums">
+              {record.attendance.filter((a) => a.status === "PRESENT").length}/{record.attendance.filter((a) => a.status !== "EXCUSED").length} katıldı
+            </span>
+          </h3>
+          {record.attendance.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Henüz yoklama alınmadı.</p>
+          ) : (
+            <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
+              {record.attendance.map((a) => (
+                <li key={`${a.title}-${a.date.toISOString()}`} className="flex items-center justify-between gap-3 px-3 py-1.5 text-sm">
+                  <span className="min-w-0 truncate">{a.title}</span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="font-mono text-xs text-subtle tabular-nums">{formatDate(a.date)}</span>
+                    <Badge variant={a.status === "PRESENT" ? "success" : a.status === "ABSENT" ? "destructive" : "outline"}>{ATTENDANCE_LABELS[a.status]}</Badge>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       ) : null}
       {links.length > 0 ? (

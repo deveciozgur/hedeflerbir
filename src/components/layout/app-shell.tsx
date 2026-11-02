@@ -1,14 +1,18 @@
 import type { ReactNode } from "react";
-import { PROFILE_HREF, SHELL_LABEL, type ShellVariant } from "@/config/navigation";
+import { cookies } from "next/headers";
+import { CalendarRange } from "lucide-react";
+import { PROFILE_HREF, SHELL_LABEL, SIDEBAR_COOKIE, type ShellVariant } from "@/config/navigation";
 import type { Viewer } from "@/modules/identity/application/viewer.queries";
 import { getRecentNotifications } from "@/modules/notifications/application/notifications.queries";
 import { NotificationBell } from "@/modules/notifications/ui/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Brand } from "./brand";
+import { Breadcrumbs } from "./breadcrumbs";
 import { CommandPalette } from "./command-palette";
 import { MobileNav } from "./mobile-nav";
 import { PasswordReminder } from "./password-reminder";
-import { SidebarNav } from "./sidebar-nav";
+import { ShellSidebar } from "./shell-sidebar";
+import { getProgramLabel } from "@/modules/learning/application/program.service";
 import { UserMenu } from "./user-menu";
 
 interface AppShellProps {
@@ -18,7 +22,8 @@ interface AppShellProps {
 }
 
 export async function AppShell({ variant, viewer, children }: AppShellProps) {
-  const notifications = await getRecentNotifications(viewer.id);
+  const [notifications, cookieStore, program] = await Promise.all([getRecentNotifications(viewer.id), cookies(), getProgramLabel()]);
+  const collapsed = cookieStore.get(SIDEBAR_COOKIE)?.value === "collapsed";
 
   return (
     <div className="flex min-h-dvh">
@@ -29,15 +34,18 @@ export async function AppShell({ variant, viewer, children }: AppShellProps) {
         İçeriğe geç
       </a>
 
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-8 border-r border-sidebar-border bg-sidebar px-4 py-6 lg:flex">
-        <Brand subtitle={SHELL_LABEL[variant]} className="px-2" />
-        <SidebarNav variant={variant} />
-      </aside>
+      <ShellSidebar variant={variant} initialCollapsed={collapsed} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/75 px-4 backdrop-blur-md sm:px-6 lg:px-12">
           <MobileNav variant={variant} />
           <Brand subtitle={SHELL_LABEL[variant]} className="lg:hidden" />
+          <Breadcrumbs variant={variant} />
+          {program ? (
+            <span className="ml-2 hidden items-center gap-1.5 rounded-md border border-border bg-surface-raised px-2 py-1 text-xs text-muted-foreground xl:inline-flex" title="Aktif program">
+              <CalendarRange className="size-3.5" aria-hidden /> {program}
+            </span>
+          ) : null}
           <div className="ml-auto flex items-center gap-1">
             <CommandPalette variant={variant} />
             <ThemeToggle />

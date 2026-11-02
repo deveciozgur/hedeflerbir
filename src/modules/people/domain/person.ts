@@ -28,6 +28,8 @@ export interface PersonRecord extends PersonSummary {
   socialLinks: Record<string, string>;
   team: { name: string; focusArea: string | null } | null;
   isRepresentative: boolean;
+  /** Roll-call history, newest first (admin view only). */
+  attendance: Array<{ title: string; date: Date; status: "PRESENT" | "ABSENT" | "EXCUSED" }>;
 }
 
 export const SOCIAL_LABELS: Record<string, string> = { linkedin: "LinkedIn", github: "GitHub", x: "X", website: "Web sitesi" };

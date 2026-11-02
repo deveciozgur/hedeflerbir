@@ -13,10 +13,11 @@ import { fullName } from "@/lib/utils";
 import type { InstructorSubmission } from "@/modules/learning/application/instructor-overview.queries";
 import { gradeSubmissionAction } from "../application/assignment.actions";
 import { GradingForm, type GradingFormSubmit } from "./grading-form";
+import { SubmissionPreview } from "./grading-workspace";
 
 /**
- * Dashboard grading desk: recent submissions as rows; a row slides a drawer in from the right with the
- * file, the student's note and the grade (0-max) + feedback form. The full desk stays one link away.
+ * Dashboard grading desk: recent submissions as a table; a row slides a drawer in from the right with the
+ * file preview (PDF / image), the student's note and the grade (0-max) + Markdown feedback form. The full desk stays one link away.
  */
 export function GradingDrawer({ submissions }: { submissions: InstructorSubmission[] }) {
   const router = useRouter();
@@ -40,40 +41,74 @@ export function GradingDrawer({ submissions }: { submissions: InstructorSubmissi
 
   return (
     <>
-      <ul className="-mx-2 flex flex-col divide-y divide-border">
-        {submissions.map((s) => (
-          <li key={s.id}>
-            <button
-              type="button"
-              onClick={() => {
+      <div className="-mx-6 overflow-x-auto">
+        <table className="w-full min-w-[34rem] text-sm">
+          <caption className="sr-only">Notlandırılmayı bekleyen teslimler</caption>
+          <thead className="border-y border-border bg-muted/40 text-left text-xs text-muted-foreground">
+            <tr>
+              <th scope="col" className="px-6 py-2 font-medium">Katılımcı</th>
+              <th scope="col" className="px-3 py-2 font-medium">Ödev · eğitim</th>
+              <th scope="col" className="px-3 py-2 font-medium">Dosya</th>
+              <th scope="col" className="px-3 py-2 text-right font-medium">Teslim</th>
+              <th scope="col" className="px-6 py-2">
+                <span className="sr-only">İşlem</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {submissions.map((s) => {
+              const openRow = () => {
                 setShownId(s.id);
                 setOpen(true);
-              }}
-              aria-haspopup="dialog"
-              className="group flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left outline-none transition-colors duration-150 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]"
-            >
-              <UserAvatar user={s.student} className="size-8" />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">{fullName(s.student)}</span>
-                <span className="block truncate text-xs text-subtle">
-                  {s.assignmentTitle}
-                  {s.trainingTitle ? ` · ${s.trainingTitle}` : ""}
-                </span>
-              </span>
-              <time dateTime={s.submittedAt.toISOString()} className="hidden shrink-0 font-mono text-xs text-muted-foreground tabular-nums sm:block">
-                {formatRelative(s.submittedAt)}
-              </time>
-              <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-medium text-brand-soft">
-                Notlandır <ChevronRight className="size-3.5 transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden />
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
+              };
+              return (
+                <tr key={s.id} onClick={openRow} className="group cursor-pointer transition-colors duration-150 hover:bg-accent/60">
+                  <td className="px-6 py-2.5">
+                    <span className="flex items-center gap-2.5">
+                      <UserAvatar user={s.student} className="size-7" />
+                      <span className="truncate font-medium">{fullName(s.student)}</span>
+                    </span>
+                  </td>
+                  <td className="max-w-56 px-3 py-2.5">
+                    <span className="block truncate">{s.assignmentTitle}</span>
+                    {s.trainingTitle ? <span className="block truncate text-xs text-subtle">{s.trainingTitle}</span> : null}
+                  </td>
+                  <td className="max-w-40 px-3 py-2.5">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <FileText className="size-3.5 shrink-0" aria-hidden />
+                      <span className="truncate">{s.fileName ?? "Dosya"}</span>
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                    <time dateTime={s.submittedAt.toISOString()} className="font-mono text-xs text-muted-foreground tabular-nums">
+                      {formatRelative(s.submittedAt)}
+                    </time>
+                  </td>
+                  <td className="px-6 py-2.5 text-right">
+                    {/* The row is clickable for the mouse; this button is the keyboard and screen-reader path. */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openRow();
+                      }}
+                      aria-haspopup="dialog"
+                      aria-label={`${fullName(s.student)} teslimini notlandır`}
+                      className="inline-flex items-center gap-0.5 rounded-sm text-xs font-medium text-brand-soft outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      Notlandır <ChevronRight className="size-3.5 transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       <Dialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
         {active ? (
-          <SheetContent className="max-w-lg">
+          <SheetContent className="max-w-xl">
             <div className="flex items-center gap-3 pr-8">
               <UserAvatar user={active.student} className="size-10" />
               <div className="min-w-0">
@@ -105,6 +140,8 @@ export function GradingDrawer({ submissions }: { submissions: InstructorSubmissi
               </Button>
             </section>
 
+            <SubmissionPreview submissionId={active.id} fileName={active.fileName} />
+
             {active.note ? (
               <section aria-label="Katılımcının notu" className="rounded-lg bg-muted/50 p-3">
                 <p className="mb-1 text-xs font-medium text-subtle">Katılımcının notu</p>
@@ -120,7 +157,7 @@ export function GradingDrawer({ submissions }: { submissions: InstructorSubmissi
               href={`/instructor/assignments/${active.assignmentId}`}
               className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <ExternalLink className="size-3.5" aria-hidden /> Tam notlandırma masasında aç (önizleme ve geçmiş)
+              <ExternalLink className="size-3.5" aria-hidden /> Tam notlandırma masasında aç (geçmiş ve tüm teslimler)
             </Link>
           </SheetContent>
         ) : null}
