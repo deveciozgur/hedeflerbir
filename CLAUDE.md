@@ -81,7 +81,7 @@ Feature briefs often use generic names. They map to existing pieces:
 
 Routes by role:
 
-- **Student**: `/dashboard` (training progress + badge showcase), `/trainings` (live-training calendar, Tamamlandı/Tamamlanmadı) and `/trainings/[sessionId]` (topics, link, assignment upload), `/assignments` (to-do list linking to the training), `/team` (Ekibim, read-only: problem, representative, members), `/participants` (all participants as cards), `/mentors` (mentor cards + the team's approved sessions; no calendar, `/mentors/[id]` redirects), `/profile` (attendance, 9 badges).
+- **Student**: `/dashboard` (KPI strip: attendance %, completed sessions, pending assignments, badge score; next live session with countdown and join link, training timeline, team + approved session card, badge showcase, task list), `/trainings` (live-training calendar, Tamamlandı/Tamamlanmadı) and `/trainings/[sessionId]` (topics, link, assignment upload), `/assignments` (to-do list linking to the training), `/team` (Ekibim, read-only: problem, representative, members), `/participants` (all participants as cards), `/mentors` (mentor cards + the team's approved sessions; no calendar, `/mentors/[id]` redirects), `/profile` (attendance, 9 badges).
 - **Instructor**: `/instructor` (hours KPI, grading drawer `grading-drawer.tsx` that grades in a side sheet, class prep card), `/instructor/students` lists every participant as person cards; roll calls via `attendance-dialog.tsx`. Grading access = course owner or the training's own instructor (action, desk query and file route).
 - **Mentor**: appointment cards show the team brief (representative, members, problem); only approved sessions (PENDING never reaches mentor or team views); no booking. The mentor views and sets each session's meeting link (`MeetingLinkField` → `setMeetingLinkAction`, team notified).
 - **Admin**: `/admin` (training progress + weekly calendar), `/admin/users` (single create + CSV import, suspension), `/admin/participants` (cards with the full profile record + badge toggles), `/admin/teams` (members multi-select, representative, problem), `/admin/trainings` (training cards + Eğitmenler cards; no programme picker), `/admin/mentors` ("Yeni seans", pending sessions with Onayla, approved/past sessions, mentor availability), `/admin/reports` (demographics, attendance, mentoring, expertise, export; `/admin/exports` redirects here), `/admin/audit`.
@@ -121,7 +121,7 @@ Routes by role:
 
 ## Deployment (Hostinger Node.js app)
 
-- Deploys are triggered manually in hPanel from `main`; env vars are set in hPanel.
+- Deploys are triggered manually in hPanel from `main` of `deveciozgur/hedeflerbir`; env vars are set in hPanel. The repo name differs from the folder name (and is what the desktop sidebar shows); keep it, hPanel is linked to it.
 - `next.config.ts` builds with `experimental.cpus: 1` and no webpack build worker: the shared host's process limit otherwise kills static generation with `spawn EAGAIN`. Don't remove it.
 - Every route that renders a PDF must list its fonts/assets in `outputFileTracingIncludes`.
 - A failed build keeps the previous version live; confirm a deploy by hitting a route that only exists in the new code.
@@ -139,5 +139,5 @@ Routes by role:
 - Client components stay small leaves; pass Lucide icons to client components as elements, not component references.
 - Hydration: give `DndContext` a stable `id` (`useId`); header widgets that render Radix overlays mount after hydration (`command-palette.tsx`, `user-menu.tsx`), otherwise their ids drift and React reports a mismatch.
 - ESLint (`@next/next`) rejects variables named `module`; use `courseModule`.
-- Git: there is no global identity on this machine; commit with `git -c user.name="HedeflerBir" -c user.email="info@gamedev.ist" commit ...`.
+- Git: there is no global identity on this machine; commit with `git -c user.name="HedeflerBir" -c user.email="info@gamedev.ist" commit ...`. The `gh` CLI is not installed; check GitHub with `git ls-remote` or unauthenticated `curl`.
 - Editing on Windows: prefer the Edit/Write tools. Python run from a Git Bash heredoc can mangle `\uXXXX` escapes and backslashes in the text it writes; put multi-line edit scripts in a file instead.
