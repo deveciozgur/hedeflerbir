@@ -65,9 +65,10 @@ export default async function StudentDashboardPage() {
             <StatTile
               icon={ClipboardCheck}
               tone={dueSoon > 0 ? "magenta" : "neutral"}
-              label="Teslim edilen görev"
-              value={`${submitted}/${assignments.length}`}
+              label="Bekleyen ödev"
+              value={String(assignments.length - submitted)}
               trend={dueSoon > 0 ? { label: `${dueSoon} görev 3 gün içinde`, tone: "bad" } : undefined}
+              hint={`${submitted}/${assignments.length} teslim edildi`}
             />
           </div>
           <div className={BENTO_SPAN.kpi}>
