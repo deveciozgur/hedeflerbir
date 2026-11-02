@@ -5,7 +5,7 @@ import { Card, CardContent } from "./card";
 const TONES = {
   neutral: "bg-muted text-muted-foreground",
   brand: "bg-brand/10 text-brand-soft",
-  magenta: "bg-magenta/10 text-magenta",
+  magenta: "bg-magenta/10 text-magenta-soft",
   cyan: "bg-cyan/15 text-foreground",
   amber: "bg-amber/20 text-foreground",
 } as const;

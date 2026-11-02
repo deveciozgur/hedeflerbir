@@ -29,11 +29,21 @@ export interface InstructorNextSession {
   courseId: string;
 }
 
+/** The last training that has started (live now or already held), with its roster, for the quick roll call. */
+export interface InstructorRollCall {
+  id: string;
+  title: string;
+  scheduleDate: Date;
+  attendance: Array<{ studentId: string; status: "PRESENT" | "ABSENT" | "EXCUSED" }>;
+  roster: Array<{ id: string; name: string; surname: string; avatarUrl: string | null }>;
+}
+
 export interface InstructorOverview {
   /** deliveredMinutes: total length of the live trainings already held. */
   kpis: { delivered: number; deliveredMinutes: number; attendances: number; awaitingReview: number; nextAt: Date | null };
   recentSubmissions: InstructorSubmission[];
   next: InstructorNextSession | null;
+  rollCall: InstructorRollCall | null;
   upcoming: Array<{ id: string; title: string; scheduleDate: Date }>;
 }
 
@@ -49,7 +59,7 @@ export async function getInstructorOverview(instructorId: string): Promise<Instr
   // Grading follows course ownership (the grading desk's access rule) or the training the assignment belongs to.
   const gradable: Prisma.AssignmentWhereInput = { OR: [{ course: { instructorId } }, { session: { instructorId } }] };
 
-  const [delivered, attendances, awaitingReview, submissions, upcoming] = await Promise.all([
+  const [delivered, attendances, awaitingReview, submissions, upcoming, started] = await Promise.all([
     db.courseSession.aggregate({ where: { ...mine, scheduleDate: { lt: now } }, _count: { _all: true }, _sum: { durationMinutes: true } }),
     db.sessionAttendance.count({ where: { status: "PRESENT", session: mine } }),
     db.submission.count({ where: { status: "SUBMITTED", assignment: gradable } }),
@@ -79,6 +89,25 @@ export async function getInstructorOverview(instructorId: string): Promise<Instr
         durationMinutes: true,
         meetingUrl: true,
         course: { select: { id: true, _count: { select: { enrollments: true } } } },
+      },
+    }),
+    db.courseSession.findFirst({
+      where: { ...mine, scheduleDate: { lte: now } },
+      orderBy: { scheduleDate: "desc" },
+      select: {
+        id: true,
+        title: true,
+        scheduleDate: true,
+        attendances: { select: { studentId: true, status: true } },
+        course: {
+          select: {
+            enrollments: {
+              where: { student: { isActive: true } },
+              orderBy: { student: { name: "asc" } },
+              select: { student: { select: { id: true, name: true, surname: true, avatarUrl: true } } },
+            },
+          },
+        },
       },
     }),
   ]);
@@ -117,6 +146,15 @@ export async function getInstructorOverview(instructorId: string): Promise<Instr
           meetingUrl: first.meetingUrl,
           participantCount: first.course._count.enrollments,
           courseId: first.course.id,
+        }
+      : null,
+    rollCall: started
+      ? {
+          id: started.id,
+          title: started.title,
+          scheduleDate: started.scheduleDate,
+          attendance: started.attendances,
+          roster: started.course.enrollments.map((e) => e.student),
         }
       : null,
     upcoming: live.slice(1).map((s) => ({ id: s.id, title: s.title, scheduleDate: s.scheduleDate })),

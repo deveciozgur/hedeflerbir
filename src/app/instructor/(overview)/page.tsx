@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatTile } from "@/components/ui/stat-tile";
 import { formatCountdown, formatDateTime, formatTime, formatTimeRange, relativeDayLabel } from "@/lib/format";
 import { GradingDrawer } from "@/modules/assignments/ui/grading-drawer";
+import { AttendanceDialog } from "@/modules/learning/ui/attendance-dialog";
 import { getViewer } from "@/modules/identity/application/viewer.queries";
 import { getInstructorOverview } from "@/modules/learning/application/instructor-overview.queries";
 
@@ -144,6 +145,26 @@ export default async function InstructorOverviewPage() {
               )}
             </CardContent>
           </Card>
+
+          {o.rollCall ? (
+            <Card className="gap-3 py-5">
+              <CardHeader>
+                <div>
+                  <CardTitle>Hızlı yoklama</CardTitle>
+                  <CardDescription>
+                    {o.rollCall.title} · <span className="font-mono tabular-nums">{formatDateTime(o.rollCall.scheduleDate)}</span>
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="flex items-center justify-between gap-3">
+                <p className="font-mono text-sm tabular-nums">
+                  {o.rollCall.attendance.filter((a) => a.status === "PRESENT").length}/{o.rollCall.roster.length}
+                  <span className="ml-1.5 font-sans text-xs text-muted-foreground">katıldı</span>
+                </p>
+                <AttendanceDialog session={o.rollCall} roster={o.rollCall.roster} />
+              </CardContent>
+            </Card>
+          ) : null}
 
           {o.upcoming.length > 0 ? (
             <Card className="gap-3 py-5">

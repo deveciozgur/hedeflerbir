@@ -33,7 +33,7 @@ export interface PersonRecord extends PersonSummary {
 export const SOCIAL_LABELS: Record<string, string> = { linkedin: "LinkedIn", github: "GitHub", x: "X", website: "Web sitesi" };
 
 /** Brand accents for initials placeholders, picked deterministically so a person keeps their colour. */
-const AVATAR_TONES = ["bg-brand/15 text-brand-soft", "bg-magenta/15 text-magenta", "bg-cyan/20 text-foreground", "bg-amber/25 text-foreground"] as const;
+const AVATAR_TONES = ["bg-brand/15 text-brand-soft", "bg-magenta/15 text-magenta-soft", "bg-cyan/20 text-foreground", "bg-amber/25 text-foreground"] as const;
 
 export function avatarTone(seed: string): (typeof AVATAR_TONES)[number] {
   let hash = 0;

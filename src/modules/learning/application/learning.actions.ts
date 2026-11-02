@@ -238,6 +238,7 @@ export async function saveAttendanceAction(input: unknown): Promise<ActionResult
 
   after(() => awardBadgesSafely(records.filter((r) => r.status === "PRESENT").map((r) => r.studentId)));
   revalidatePath(`/instructor/courses/${session.course.id}`);
+  revalidatePath("/instructor"); // dashboard quick roll call
   revalidatePath("/admin", "layout");
   revalidatePath("/trainings", "layout");
   revalidatePath("/dashboard");

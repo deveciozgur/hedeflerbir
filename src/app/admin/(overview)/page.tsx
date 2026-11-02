@@ -123,7 +123,7 @@ export default async function AdminHomePage() {
                   {o.teamsWithoutRepresentative > 0 ? (
                     <li>
                       <Link href="/admin/teams" className={rowClass}>
-                        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-magenta/10 text-magenta" aria-hidden>
+                        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-magenta/10 text-magenta-soft" aria-hidden>
                           <UserRoundX className="size-3.5" />
                         </span>
                         <span className="min-w-0 flex-1 text-sm">

@@ -77,7 +77,7 @@ export function GradingForm({ maxScore, defaultGrade, defaultFeedback, pending, 
           />
         </div>
       </FormField>
-      <FormField id="feedback" label="Geri bildirim" error={errors.feedback?.message}>
+      <FormField id="feedback" label="Geri bildirim" error={errors.feedback?.message} hint="Markdown desteklenir: **kalın**, listeler, bağlantılar.">
         <Textarea
           id="feedback"
           rows={6}

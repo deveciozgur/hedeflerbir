@@ -63,7 +63,7 @@ export function UserMenu({ name, surname, email, role, avatarUrl, profileHref }:
             {name} {surname}
           </p>
           <p className="truncate text-xs text-muted-foreground">{email}</p>
-          <p className="mt-1 text-xs text-brand">{ROLE_LABELS[role]}</p>
+          <p className="mt-1 text-xs text-brand-soft">{ROLE_LABELS[role]}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>

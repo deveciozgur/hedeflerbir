@@ -40,7 +40,7 @@ export default async function TrainingDetailPage({ params }: { params: Promise<{
           <div className="flex flex-wrap items-center gap-2">
             <TrainingStatusBadge completed={training.completed} start={training.scheduleDate} durationMinutes={training.durationMinutes} />
             {training.badge ? (
-              <Badge variant="outline" className="border-magenta/30 text-magenta">
+              <Badge variant="outline" className="border-magenta/30 text-magenta-soft">
                 <Award aria-hidden /> {training.badge.name} rozeti
               </Badge>
             ) : null}

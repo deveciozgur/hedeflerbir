@@ -7,7 +7,8 @@
  * accents, two themes. Light: #FAFAFA (zinc-50) page, opaque white cards with a hairline border and an xs shadow.
  * Dark: zinc-950 page, zinc-900/50 cards over a blur with a zinc-800/70 border and no shadow.
  * Light is the default (:root); `.dark` on <html> is set by next-themes before first paint.
- * Contrast notes (WCAG 2.1 AA) are measured against each theme's --background.
+ * Text tokens (foreground, muted, subtle, *-soft, status) meet WCAG AAA (7:1) on both the page and card
+ * surfaces of each theme; brand fills (#008374 with white text, 4.7:1) are AA, AAA only for large text.
  */
 :root {
   color-scheme: light;
@@ -32,8 +33,8 @@
 
   /* Text */
   --foreground: oklch(0.141 0.005 285.823);            /* zinc-950 ~19:1 */
-  --muted-foreground: oklch(0.442 0.017 285.786);      /* zinc-600 ~7.7:1 */
-  --subtle: oklch(0.552 0.016 285.938);                /* zinc-500 ~4.8:1 */
+  --muted-foreground: oklch(0.40 0.016 285.9);         /* ~8.9:1 on the page (AAA) */
+  --subtle: oklch(0.45 0.017 285.8);                   /* ~7.2:1 on the page (AAA) */
 
   /* Lines */
   --border: oklch(0.92 0.004 286.32 / 0.8);            /* zinc-200/80 */
@@ -44,18 +45,19 @@
 
   /* HedeflerBir brand: primary teal #008374; magenta / cyan / amber are the logo accents. */
   --brand: #008374;                                    /* white text 4.7:1 */
-  --brand-soft: #006a5e;                               /* teal text on tinted chips ~6.4:1 */
+  --brand-soft: #005c52;                               /* teal text ~7.6:1 (AAA); #008374 itself is fills/buttons only */
   --brand-foreground: oklch(0.985 0 0);
   --primary: #008374;
   --primary-foreground: oklch(0.985 0 0);
-  --magenta: #b41c83;                                  /* white text 6.3:1 */
+  --magenta: #b41c83;                                  /* fills, dots, borders */
+  --magenta-soft: #8f1468;                             /* magenta text ~8.2:1 (AAA) */
   --cyan: #01bbbe;                                     /* decorative fills only (2.4:1 on white) */
   --amber: #ffa200;                                    /* decorative fills only; dark text on it */
 
   /* Status (reserved for state, never decoration) */
-  --success: oklch(0.508 0.118 165.612);               /* emerald-700 ~5.5:1 */
-  --warning: oklch(0.555 0.163 48.998);                /* amber-700 ~5:1 */
-  --destructive: oklch(0.505 0.213 27.518);            /* red-700 ~6.5:1 */
+  --success: oklch(0.42 0.1 165.6);                    /* ~7.6:1 (AAA) */
+  --warning: oklch(0.45 0.13 49);                      /* ~7.5:1 (AAA) */
+  --destructive: oklch(0.44 0.19 27.5);                /* ~7.9:1 (AAA) */
   --destructive-solid: oklch(0.577 0.245 27.325);      /* red-600 fill, white text ~4.8:1 */
 
   --sidebar: oklch(0.985 0 0);
@@ -88,8 +90,8 @@
   --shadow: oklch(0.141 0.005 285.823 / 0.6);
 
   --foreground: oklch(0.967 0.001 286.375);            /* zinc-100 ~17:1 */
-  --muted-foreground: oklch(0.705 0.015 286.067);      /* zinc-400 ~7.8:1 */
-  --subtle: oklch(0.63 0.014 286);                     /* ~5.6:1 (zinc-500 is only ~4.1:1 here) */
+  --muted-foreground: oklch(0.80 0.01 286);            /* ~10:1 on cards (AAA) */
+  --subtle: oklch(0.72 0.014 286);                     /* ~7.5:1 on cards (AAA) */
 
   --border: oklch(0.274 0.006 286.033 / 0.7);          /* zinc-800/70 */
   --border-strong: oklch(0.37 0.013 285.805);          /* zinc-700: card hover */
@@ -103,12 +105,13 @@
   --primary: #008374;
   --primary-foreground: oklch(0.985 0 0);
   --magenta: #d9479f;
+  --magenta-soft: #f08cc8;                             /* magenta text ~8.3:1 (AAA) */
   --cyan: #01bbbe;
   --amber: #ffa200;
 
   --success: oklch(0.765 0.177 163.223);               /* emerald-400 */
   --warning: oklch(0.828 0.189 84.429);                /* amber-400 */
-  --destructive: oklch(0.704 0.191 22.216);            /* red-400 */
+  --destructive: oklch(0.76 0.16 22.2);                /* ~7.9:1 (AAA) */
   --destructive-solid: oklch(0.577 0.245 27.325);
 
   --sidebar: oklch(0.141 0.005 285.823);
@@ -144,6 +147,7 @@
   --color-brand-soft: var(--brand-soft);
   --color-brand-foreground: var(--brand-foreground);
   --color-magenta: var(--magenta);
+  --color-magenta-soft: var(--magenta-soft);
   --color-cyan: var(--cyan);
   --color-amber: var(--amber);
   --color-border: var(--border);

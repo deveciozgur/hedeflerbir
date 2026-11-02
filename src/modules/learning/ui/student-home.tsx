@@ -121,7 +121,7 @@ export function NextSessionCard({ next }: { next: StudentTrainingCard | null }) 
         {next.topics[0] ? <p className="line-clamp-2 text-sm text-pretty">Konu: {next.topics.slice(0, 2).join(", ")}</p> : null}
         {next.badge ? (
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Sparkles className="size-3.5 text-magenta" aria-hidden /> Katılırsan {next.badge.name} rozeti
+            <Sparkles className="size-3.5 text-magenta-soft" aria-hidden /> Katılırsan {next.badge.name} rozeti
           </p>
         ) : null}
         <div className="mt-auto flex flex-wrap gap-2">
@@ -352,7 +352,7 @@ export function AssignmentChecklist({ assignments }: { assignments: StudentAssig
                     {a.status === "RETURNED" ? <Badge variant="warning">Düzeltme istendi</Badge> : null}
                     <time
                       dateTime={a.dueDate.toISOString()}
-                      className={cn("shrink-0 font-mono text-xs tabular-nums", overdue || urgent ? "font-medium text-magenta" : "text-muted-foreground")}
+                      className={cn("shrink-0 font-mono text-xs tabular-nums", overdue || urgent ? "font-medium text-magenta-soft" : "text-muted-foreground")}
                     >
                       {a.done ? formatDate(a.dueDate) : overdue ? "Süresi geçti" : formatRelative(a.dueDate)}
                     </time>

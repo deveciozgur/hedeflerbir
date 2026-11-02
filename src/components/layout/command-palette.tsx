@@ -7,8 +7,10 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import { useTheme } from "next-themes";
 import {
   BookOpen,
+  CalendarPlus,
   ClipboardCheck,
   CornerDownLeft,
+  Download,
   GraduationCap,
   Layers,
   Loader2,
@@ -16,6 +18,7 @@ import {
   Moon,
   Search,
   Sparkles,
+  Upload,
   UserRound,
   Users,
   UsersRound,
@@ -35,6 +38,15 @@ const GROUP_ICON: Record<SearchGroup, LucideIcon> = {
   Ekipler: UsersRound,
   Kullanıcılar: UserRound,
 };
+
+/** Admin shortcuts: each opens the page where the action lives (its dialog is one click away there). */
+const ADMIN_ACTIONS: Array<{ label: string; href: string; icon: LucideIcon; keywords: string }> = [
+  { label: "Yeni canlı eğitim tanımla", href: "/admin/trainings", icon: CalendarPlus, keywords: "eğitim ekle oluştur training" },
+  { label: "Yeni ekip kur", href: "/admin/teams", icon: UsersRound, keywords: "ekip takım oluştur team" },
+  { label: "Mentorluk seansı tanımla veya onayla", href: "/admin/mentors", icon: Sparkles, keywords: "seans mentor onayla randevu" },
+  { label: "Toplu kullanıcı içe aktar (CSV)", href: "/admin/users", icon: Upload, keywords: "csv import kullanıcı yükle askıya al" },
+  { label: "Rapor indir", href: "/admin/reports#export-heading", icon: Download, keywords: "rapor dışa aktar export excel pdf" },
+];
 
 const itemClass =
   "flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm outline-none data-[selected=true]:bg-accent data-[selected=true]:text-foreground aria-disabled:opacity-50";
@@ -126,7 +138,7 @@ export function CommandPalette({ variant }: { variant: ShellVariant }) {
                   <Command.Input
                     value={query}
                     onValueChange={setQuery}
-                    placeholder="Sayfa, eğitim, ders, ödev veya kişi ara…"
+                    placeholder="Sayfa, eğitim, ekip, ödev veya kişi ara…"
                     className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-subtle"
                   />
                   <kbd className="rounded border border-border bg-surface-sunken px-1.5 font-mono text-[11px] text-muted-foreground">Esc</kbd>
@@ -171,6 +183,14 @@ export function CommandPalette({ variant }: { variant: ShellVariant }) {
                   ))}
 
                   <Command.Group heading="İşlemler" className={groupClass}>
+                    {variant === "admin"
+                      ? ADMIN_ACTIONS.map((action) => (
+                          <Command.Item key={action.href} value={`işlem ${action.label} ${action.keywords}`} onSelect={() => go(action.href)} className={itemClass}>
+                            <action.icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                            <span className="flex-1">{action.label}</span>
+                          </Command.Item>
+                        ))
+                      : null}
                     <Command.Item value="ayarlar profil hesap" onSelect={() => go(PROFILE_HREF[variant])} className={itemClass}>
                       <UserRound className="size-4 shrink-0 text-muted-foreground" aria-hidden /> Profil ve ayarlar
                     </Command.Item>

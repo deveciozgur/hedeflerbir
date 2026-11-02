@@ -1,5 +1,6 @@
 import { MessageSquareQuote, RotateCcw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Markdown } from "@/components/ui/markdown";
 import { Progress } from "@/components/ui/progress";
 import { formatDateTime } from "@/lib/format";
 import { scorePercentage } from "../domain/submission-status";
@@ -45,7 +46,9 @@ export function FeedbackCard({ instructorName, status, grade, maxScore, feedback
           </div>
         ) : null}
         {feedback ? (
-          <blockquote className="border-l-2 pl-4 text-sm leading-relaxed whitespace-pre-wrap text-pretty">{feedback}</blockquote>
+          <blockquote className="border-l-2 pl-4">
+            <Markdown className="text-sm leading-relaxed">{feedback}</Markdown>
+          </blockquote>
         ) : null}
       </CardContent>
     </Card>
@@ -78,7 +81,7 @@ export function ReviewHistory({ reviews, maxScore }: { reviews: ReviewRound[]; m
                 {review.decision === "RETURNED" ? "Revizyon istendi" : `Puan ${review.score ?? "-"}/${maxScore}`}
                 {review.reviewerName ? ` · ${review.reviewerName}` : null} · {formatDateTime(review.createdAt)}
               </p>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-pretty">{review.comment}</p>
+              <Markdown className="text-sm leading-relaxed">{review.comment}</Markdown>
             </li>
           ))}
         </ol>

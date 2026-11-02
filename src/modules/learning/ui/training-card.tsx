@@ -72,7 +72,7 @@ export function TrainingCard({ training, href, completed, footer }: TrainingCard
           <span className="font-mono tabular-nums">{training.durationMinutes} dk</span>
         </span>
         {training.badge ? (
-          <span className="inline-flex items-center gap-1.5 text-magenta">
+          <span className="inline-flex items-center gap-1.5 text-magenta-soft">
             <Award className="size-3.5" aria-hidden /> {training.badge.name}
           </span>
         ) : null}
