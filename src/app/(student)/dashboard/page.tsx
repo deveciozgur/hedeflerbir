@@ -1,52 +1,67 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { after } from "next/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
+import { BENTO_SPAN, BentoGrid } from "@/components/ui/bento";
+import { getStudentAssignments } from "@/modules/assignments/application/student-assignments.queries";
 import { remindDueAssignments } from "@/modules/assignments/application/due-reminders.service";
 import { getBadgeShowcase } from "@/modules/engagement/application/badges.service";
-import { BadgeGrid } from "@/modules/engagement/ui/badge-grid";
+import { attendanceRate } from "@/modules/engagement/domain/badges";
+import { BadgeShowcase } from "@/modules/engagement/ui/badge-showcase";
 import { getViewer } from "@/modules/identity/application/viewer.queries";
 import { getStudentDashboard } from "@/modules/learning/application/student-dashboard.queries";
-import { getTrainingProgress } from "@/modules/learning/application/trainings.queries";
+import { getStudentTrainings } from "@/modules/learning/application/trainings.queries";
+import { trainingTiming } from "@/modules/learning/domain/trainings";
 import { AnnouncementsCard } from "@/modules/learning/ui/announcements-card";
-import { ChronosTimeline } from "@/modules/learning/ui/chronos-timeline";
-import { DASHBOARD_GRID } from "@/modules/learning/ui/dashboard-grid";
-import { TrainingProgressCard } from "@/modules/learning/ui/training-progress-card";
+import { AssignmentChecklist, StudentHero, TeamSessionCard, TrainingsWidget } from "@/modules/learning/ui/student-home";
+import { getStudentUpcomingAppointments } from "@/modules/mentoring/application/mentor-directory.queries";
 
 export const metadata: Metadata = { title: "Ana Sayfa" };
 
 export default async function StudentDashboardPage() {
   const viewer = await getViewer("STUDENT");
   after(() => remindDueAssignments(viewer.id).catch((error: unknown) => console.error("Due reminders failed", error)));
-  const [dashboard, progress, showcase] = await Promise.all([getStudentDashboard(viewer.id), getTrainingProgress(viewer.id), getBadgeShowcase(viewer.id)]);
-  const earned = showcase.badges.filter((b) => b.awardedAt).length;
+  const [dashboard, trainings, showcase, assignments, sessions] = await Promise.all([
+    getStudentDashboard(viewer.id),
+    getStudentTrainings(viewer.id),
+    getBadgeShowcase(viewer.id),
+    getStudentAssignments(viewer.id),
+    getStudentUpcomingAppointments(viewer.id),
+  ]);
+
+  const next = trainings.find((t) => trainingTiming(t.scheduleDate, t.durationMinutes) !== "past") ?? null;
+  const { attendance } = showcase.stats;
+  const openAssignments = assignments.filter((a) => a.status === null || a.status === "RETURNED").length;
 
   return (
-    <div className="flex flex-col gap-8">
-      <PageHeader title={`Merhaba, ${dashboard.firstName}`} description="Bugün hedeflerine bir adım daha yaklaş." />
-
-      <section aria-label="İlerleme" className="flex flex-col gap-6">
-        <TrainingProgressCard {...progress} />
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Rozetler <span className="font-mono text-xs font-normal text-subtle tabular-nums">{earned}/{showcase.badges.length}</span>
-            </CardTitle>
-            <Link href="/profile" className="rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-              Profilde gör
-            </Link>
-          </CardHeader>
-          <CardContent>
-            <BadgeGrid badges={showcase.badges} compact />
-          </CardContent>
-        </Card>
+    <BentoGrid>
+      <section aria-label="Özet" className={BENTO_SPAN.full}>
+        <StudentHero
+          firstName={dashboard.firstName}
+          attendance={{ ...attendance, rate: attendanceRate(attendance) }}
+          trainings={{ completed: trainings.filter((t) => t.completed).length, total: trainings.length }}
+          badges={{ earned: showcase.badges.filter((b) => b.awardedAt).length, total: showcase.badges.length }}
+          openAssignments={openAssignments}
+          next={next}
+        />
       </section>
 
-      <section aria-label="Zaman akışı ve duyurular" className={DASHBOARD_GRID.bottom}>
-        <ChronosTimeline items={dashboard.agenda} />
-        <AnnouncementsCard items={dashboard.announcements} />
+      <section aria-label="Canlı eğitimler" className={BENTO_SPAN.main}>
+        <TrainingsWidget trainings={trainings} next={next} />
       </section>
-    </div>
+
+      <section aria-label="Rozetler ve mentorluk" className={`${BENTO_SPAN.side} flex flex-col gap-4`}>
+        <BadgeShowcase badges={showcase.badges} />
+        <TeamSessionCard session={sessions[0] ?? null} hasTeam={dashboard.hasTeam} />
+      </section>
+
+      <section aria-label="Ödevler" className={dashboard.announcements.length > 0 ? BENTO_SPAN.main : BENTO_SPAN.full}>
+        <AssignmentChecklist assignments={assignments} />
+      </section>
+
+      {dashboard.announcements.length > 0 ? (
+        <section aria-label="Duyurular" className={BENTO_SPAN.side}>
+          <AnnouncementsCard items={dashboard.announcements} />
+        </section>
+      ) : null}
+    </BentoGrid>
   );
 }

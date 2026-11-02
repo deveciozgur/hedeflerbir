@@ -18,7 +18,8 @@ export interface StudentAssignmentCard {
   href: string;
 }
 
-const enrolledBy = (studentId: string) => ({ course: { enrollments: { some: { studentId } } } });
+/** Assignments of the participant's programmes; draft (hidden) courses stay out like their trainings. */
+const enrolledBy = (studentId: string) => ({ course: { status: { not: "DRAFT" as const }, enrollments: { some: { studentId } } } });
 
 export async function getStudentAssignments(studentId: string): Promise<StudentAssignmentCard[]> {
   const rows = await db.assignment.findMany({

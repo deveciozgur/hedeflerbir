@@ -17,6 +17,8 @@ import {
   Search,
   Sparkles,
   UserRound,
+  Users,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import { NAVIGATION, PROFILE_HREF, type ShellVariant } from "@/config/navigation";
@@ -29,6 +31,8 @@ const GROUP_ICON: Record<SearchGroup, LucideIcon> = {
   Ödevler: ClipboardCheck,
   Mentorlar: Sparkles,
   Eğitmenler: GraduationCap,
+  Katılımcılar: Users,
+  Ekipler: UsersRound,
   Kullanıcılar: UserRound,
 };
 

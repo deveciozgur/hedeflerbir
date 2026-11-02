@@ -88,6 +88,9 @@ function TextBlock({ title, text, empty }: { title: string; text: string | null;
   );
 }
 
+/** Quiet second line on the card: school for participants, title or role for experts. */
+const cardSubtitle = (person: PersonSummary) => (person.role === "STUDENT" ? (person.school ?? ROLE_LABELS.STUDENT) : (person.title ?? ROLE_LABELS[person.role]));
+
 const isRecord = (person: PersonSummary | PersonRecord): person is PersonRecord => "email" in person;
 
 /** School, department, about (+ expertise for experts); the admin's record view adds contact, city, goals, team and links. */
@@ -190,7 +193,7 @@ interface PersonCardGridProps {
   emptyDescription?: string;
 }
 
-/** Card grid with name + photo only; a card opens the person's details and a message form. */
+/** Card grid: photo or initials, name and a quiet school/role line; a card opens the details and a message form. */
 export function PersonCardGrid({ people, canMessage = false, viewerId, details = {}, emptyTitle = "Henüz kimse yok", emptyDescription }: PersonCardGridProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const active = people.find((p) => p.id === openId) ?? null;
@@ -208,13 +211,16 @@ export function PersonCardGrid({ people, canMessage = false, viewerId, details =
               aria-haspopup="dialog"
               className={cn(
                 surfaceClass,
-                "flex h-full w-full flex-col items-center gap-3 px-4 py-6 text-center outline-none transition-[border-color,background-color] duration-150 hover:border-border-hover hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.99]",
+                "flex h-full w-full flex-col items-center gap-3 px-4 py-6 text-center outline-none transition-[border-color,background-color,scale] duration-200 hover:border-brand/50 hover:bg-brand/[0.03] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]",
               )}
             >
               <PersonAvatar person={person} className="size-16" />
-              <span className="line-clamp-2 text-sm font-semibold text-balance">
-                {fullName(person)}
-                {person.id === viewerId ? <span className="font-normal text-muted-foreground"> (sen)</span> : null}
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="line-clamp-2 text-sm font-semibold text-balance">
+                  {fullName(person)}
+                  {person.id === viewerId ? <span className="font-normal text-muted-foreground"> (sen)</span> : null}
+                </span>
+                <span className="line-clamp-1 text-xs text-subtle">{cardSubtitle(person)}</span>
               </span>
             </button>
           </li>

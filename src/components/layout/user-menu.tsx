@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { LifeBuoy, LogOut, UserRound } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,20 +26,36 @@ export interface UserMenuProps {
   profileHref: string;
 }
 
+const triggerClass =
+  "flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
 export function UserMenu({ name, surname, email, role, avatarUrl, profileHref }: UserMenuProps) {
   const [supportOpen, setSupportOpen] = useState(false);
+  // Like the command palette: the Radix menu and dialog (useId) mount after hydration, otherwise their
+  // server-rendered ids can drift from the client's and React reports a hydration mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const avatar = (
+    <Avatar>
+      {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
+      <AvatarFallback>{initials(name, surname)}</AvatarFallback>
+    </Avatar>
+  );
+
+  if (!mounted) {
+    return (
+      <button type="button" className={triggerClass} aria-label="Hesap menüsü" aria-haspopup="menu">
+        {avatar}
+      </button>
+    );
+  }
 
   return (
     <>
     <DropdownMenu>
-      <DropdownMenuTrigger
-        className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        aria-label="Hesap menüsü"
-      >
-        <Avatar>
-          {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
-          <AvatarFallback>{initials(name, surname)}</AvatarFallback>
-        </Avatar>
+      <DropdownMenuTrigger className={triggerClass} aria-label="Hesap menüsü">
+        {avatar}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
         <DropdownMenuLabel>

@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, CheckCircle2, Link2, Mail, NotebookPen, Target, Users } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Link2, Mail, NotebookPen, Target, UserRoundCheck, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AddToCalendar } from "@/components/ui/add-to-calendar";
 import { Button } from "@/components/ui/button";
@@ -76,7 +76,13 @@ export function MentorAppointmentCard({ appointment: a, showActions = true }: { 
           </div>
 
           <div className="flex flex-col gap-3">
-            <h3 className="text-xs font-medium text-muted-foreground">Katılımcılar ({team.members.length})</h3>
+            {team.representative ? (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <UserRoundCheck className="size-3.5" aria-hidden /> Ekip temsilcisi:
+                <span className="font-medium text-foreground">{fullName(team.representative)}</span>
+              </p>
+            ) : null}
+            <h3 className="text-xs font-medium text-muted-foreground">Ekip üyeleri ({team.members.length})</h3>
             <ul className="flex flex-col gap-2">
               {team.members.map((member) => (
                 <li key={member.id} className="flex items-center gap-2.5">

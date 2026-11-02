@@ -5,7 +5,7 @@ import { dayKey, formatDayNumber, formatTimeRange, formatWeekday } from "@/lib/f
 import { cn } from "@/lib/utils";
 import type { WeekDay } from "../application/program-overview.queries";
 
-/** Monday-Sunday columns with the week's live trainings (teal) and mentoring sessions (magenta). */
+/** Monday-Sunday columns with the week's live trainings (teal) and mentoring sessions (amber). */
 export function WeekCalendar({ week }: { week: WeekDay[] }) {
   const today = dayKey(new Date());
   const empty = week.every((d) => d.items.length === 0);
@@ -21,7 +21,7 @@ export function WeekCalendar({ week }: { week: WeekDay[] }) {
             <span className="size-2 rounded-full bg-brand" aria-hidden /> Canlı eğitim
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-magenta" aria-hidden /> Mentorluk
+            <span className="size-2 rounded-full bg-amber" aria-hidden /> Mentorluk
           </span>
         </div>
       </CardHeader>
@@ -45,7 +45,7 @@ export function WeekCalendar({ week }: { week: WeekDay[] }) {
                           href={item.href}
                           className={cn(
                             "flex flex-col gap-0.5 rounded-md border-l-2 px-2 py-1.5 text-xs outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
-                            item.kind === "training" ? "border-brand bg-brand/5" : "border-magenta bg-magenta/5",
+                            item.kind === "training" ? "border-brand bg-brand/5" : "border-amber bg-amber/10",
                           )}
                         >
                           <span className="flex items-center gap-1 font-mono text-[11px] text-muted-foreground tabular-nums">

@@ -60,3 +60,12 @@ export function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(minutes / 60);
   return hours > 0 ? `${hours} sa ${minutes % 60} dk` : `${minutes} dk`;
 }
+
+/** Countdown badge text: "45 dk kaldı", "5 saat kaldı", "2 gün kaldı"; "Şimdi" once it has started. */
+export function formatCountdown(date: Date, now: Date = new Date()): string {
+  const diff = date.getTime() - now.getTime();
+  if (diff <= 0) return "Şimdi";
+  if (diff < 3_600_000) return `${Math.max(1, Math.round(diff / 60_000))} dk kaldı`;
+  if (diff < 86_400_000) return `${Math.round(diff / 3_600_000)} saat kaldı`;
+  return `${Math.floor(diff / 86_400_000)} gün kaldı`;
+}

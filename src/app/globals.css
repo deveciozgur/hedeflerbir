@@ -3,7 +3,9 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * HedeflerBir design tokens - zinc neutrals, one indigo accent, two themes.
+ * HedeflerBir design tokens (v2) - zinc neutrals, teal #008374 primary with magenta / cyan / amber
+ * accents, two themes. Light: #F9FAFB page, opaque white cards with a hairline border and an xs shadow.
+ * Dark: zinc-950 page, zinc-900/40 cards over a blur with a zinc-800/60 border and no shadow.
  * Light is the default (:root); `.dark` on <html> is set by next-themes before first paint.
  * Contrast notes (WCAG 2.1 AA) are measured against each theme's --background.
  */
@@ -11,8 +13,8 @@
   color-scheme: light;
 
   /* Surfaces */
-  --background: oklch(1 0 0);                          /* white */
-  --card: oklch(1 0 0 / 0.85);
+  --background: #f9fafb;                               /* page */
+  --card: oklch(1 0 0);                                /* white */
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
@@ -34,8 +36,8 @@
   --subtle: oklch(0.552 0.016 285.938);                /* zinc-500 ~4.8:1 */
 
   /* Lines */
-  --border: oklch(0.92 0.004 286.32);                  /* zinc-200 */
-  --border-strong: oklch(0.871 0.006 286.286);         /* zinc-300 */
+  --border: oklch(0.92 0.004 286.32 / 0.75);           /* zinc-200/75 */
+  --border-strong: oklch(0.871 0.006 286.286);         /* zinc-300: card hover */
   --border-hover: oklch(0.705 0.015 286.067);          /* zinc-400 */
   --input: oklch(0.871 0.006 286.286);
   --ring: oklch(0.552 0.016 285.938);                  /* zinc-500 focus ring, >3:1 on white */
@@ -56,7 +58,7 @@
   --destructive: oklch(0.505 0.213 27.518);            /* red-700 ~6.5:1 */
   --destructive-solid: oklch(0.577 0.245 27.325);      /* red-600 fill, white text ~4.8:1 */
 
-  --sidebar: oklch(0.985 0 0);
+  --sidebar: #f9fafb;
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-accent: oklch(1 0 0);
   --sidebar-border: oklch(0.92 0.004 286.32);
@@ -69,7 +71,7 @@
   color-scheme: dark;
 
   --background: oklch(0.141 0.005 285.823);            /* zinc-950 */
-  --card: oklch(0.21 0.006 285.885 / 0.6);             /* zinc-900 @ 60%, paired with backdrop-blur */
+  --card: oklch(0.21 0.006 285.885 / 0.4);             /* zinc-900/40, paired with backdrop-blur */
   --card-foreground: oklch(0.967 0.001 286.375);
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.967 0.001 286.375);
@@ -89,8 +91,8 @@
   --muted-foreground: oklch(0.705 0.015 286.067);      /* zinc-400 ~7.8:1 */
   --subtle: oklch(0.63 0.014 286);                     /* ~5.6:1 (zinc-500 is only ~4.1:1 here) */
 
-  --border: oklch(0.274 0.006 286.033 / 0.8);          /* zinc-800/80 */
-  --border-strong: oklch(0.37 0.013 285.805);          /* zinc-700 */
+  --border: oklch(0.274 0.006 286.033 / 0.6);          /* zinc-800/60 */
+  --border-strong: oklch(0.37 0.013 285.805);          /* zinc-700: card hover */
   --border-hover: oklch(0.552 0.016 285.938);          /* zinc-500 */
   --input: oklch(0.274 0.006 286.033);
   --ring: oklch(0.705 0.015 286.067);                  /* zinc-400 */
@@ -168,15 +170,16 @@
 
   --ease-out-expo: var(--ease-out-expo);
 
-  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
   --animate-enter: enter 150ms var(--ease-out-expo);
   --animate-exit: exit 120ms var(--ease-out-expo) forwards;
   --animate-fade-in: fade-in 150ms var(--ease-out-expo);
   --animate-fade-out: fade-out 120ms var(--ease-out-expo) forwards;
 
+  /* A soft highlight sweeping across the block (see Skeleton). */
   @keyframes shimmer {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.55; }
+    from { background-position: 150% 0; }
+    to { background-position: -50% 0; }
   }
   /* `scale` (not transform) so it composes with translate-based centering. */
   @keyframes enter {

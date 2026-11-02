@@ -48,6 +48,8 @@ export interface TeamMemberBrief {
 export interface TeamBrief {
   name: string | null;
   focusArea: string | null;
+  /** Ekip temsilcisi: the member who coordinates sessions with the mentor. */
+  representative: { name: string; surname: string } | null;
   contactEmail: string;
   members: TeamMemberBrief[];
 }
@@ -95,7 +97,14 @@ export async function listAppointments(phase: AppointmentPhase, mentorId?: strin
       slot: { select: { startTime: true, endTime: true } },
       mentor: { select: { name: true, surname: true } },
       student: { select: { email: true, ...memberSelect } },
-      team: { select: { name: true, focusArea: true, members: { where: { isActive: true }, orderBy: { name: "asc" }, select: memberSelect } } },
+      team: {
+        select: {
+          name: true,
+          focusArea: true,
+          representative: { select: { name: true, surname: true } },
+          members: { where: { isActive: true }, orderBy: { name: "asc" }, select: memberSelect },
+        },
+      },
     },
   });
 
@@ -114,6 +123,7 @@ export async function listAppointments(phase: AppointmentPhase, mentorId?: strin
     team: {
       name: team?.name ?? null,
       focusArea: team?.focusArea ?? null,
+      representative: team?.representative ?? null,
       contactEmail: student.email,
       members: team ? team.members.map(toMember) : [toMember(student)],
     },
@@ -124,16 +134,18 @@ export interface MentorOverview {
   upcomingCount: number;
   openSlotCount: number;
   completedThisMonth: number;
+  completedTotal: number;
   next: MentorAppointmentRow[];
 }
 
 export async function getMentorOverview(mentorId: string): Promise<MentorOverview> {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const [upcoming, openSlotCount, completedThisMonth] = await Promise.all([
+  const [upcoming, openSlotCount, completedThisMonth, completedTotal] = await Promise.all([
     getMentorAppointments(mentorId, "upcoming"),
     db.mentorSlot.count({ where: { mentorId, isBooked: false, startTime: { gt: now } } }),
     db.appointment.count({ where: { mentorId, status: "COMPLETED", slot: { startTime: { gte: monthStart } } } }),
+    db.appointment.count({ where: { mentorId, status: "COMPLETED" } }),
   ]);
-  return { upcomingCount: upcoming.length, openSlotCount, completedThisMonth, next: upcoming.slice(0, 3) };
+  return { upcomingCount: upcoming.length, openSlotCount, completedThisMonth, completedTotal, next: upcoming.slice(0, 3) };
 }

@@ -5,7 +5,7 @@ import { requireRole } from "@/server/auth/guards";
 import { fullName } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
 
-export type SearchGroup = "Eğitimler" | "Dersler" | "Ödevler" | "Mentorlar" | "Eğitmenler" | "Kullanıcılar";
+export type SearchGroup = "Eğitimler" | "Dersler" | "Ödevler" | "Mentorlar" | "Eğitmenler" | "Katılımcılar" | "Ekipler" | "Kullanıcılar";
 
 export interface SearchResult {
   id: string;
@@ -27,7 +27,7 @@ export async function searchAction(rawQuery: unknown): Promise<SearchResult[]> {
   switch (user.role) {
     case "STUDENT": {
       const enrolled = { enrollments: { some: { studentId: user.id } }, status: { not: "DRAFT" as const } };
-      const [trainings, assignments, mentors, instructors] = await Promise.all([
+      const [trainings, assignments, mentors, instructors, participants] = await Promise.all([
         db.courseSession.findMany({
           where: { course: enrolled, OR: [{ title: like(q) }, { topics: like(q) }] },
           orderBy: { scheduleDate: "asc" },
@@ -49,6 +49,11 @@ export async function searchAction(rawQuery: unknown): Promise<SearchResult[]> {
           take: PER_GROUP,
           select: { id: true, name: true, surname: true, profile: { select: { title: true } } },
         }),
+        db.user.findMany({
+          where: { role: "STUDENT", isActive: true, id: { not: user.id }, OR: [{ name: like(q) }, { surname: like(q) }, { profile: { school: like(q) } }] },
+          take: PER_GROUP,
+          select: { id: true, name: true, surname: true, profile: { select: { school: true } } },
+        }),
       ]);
       return [
         ...trainings.map((t) => ({ id: t.id, group: "Eğitimler" as const, title: t.title, subtitle: t.course.title, href: `/trainings/${t.id}` })),
@@ -59,8 +64,9 @@ export async function searchAction(rawQuery: unknown): Promise<SearchResult[]> {
           subtitle: a.session?.title ?? a.course.title,
           href: a.sessionId ? `/trainings/${a.sessionId}` : `/assignments/${a.id}`,
         })),
-        ...mentors.map((m) => ({ id: m.id, group: "Mentorlar" as const, title: fullName(m), subtitle: m.profile?.title ?? null, href: `/mentors/${m.id}` })),
+        ...mentors.map((m) => ({ id: m.id, group: "Mentorlar" as const, title: fullName(m), subtitle: m.profile?.title ?? null, href: "/mentors" })),
         ...instructors.map((i) => ({ id: i.id, group: "Eğitmenler" as const, title: fullName(i), subtitle: i.profile?.title ?? null, href: `/instructors/${i.id}` })),
+        ...participants.map((p) => ({ id: p.id, group: "Katılımcılar" as const, title: fullName(p), subtitle: p.profile?.school ?? null, href: "/participants" })),
       ];
     }
     case "INSTRUCTOR": {
@@ -81,7 +87,7 @@ export async function searchAction(rawQuery: unknown): Promise<SearchResult[]> {
       ];
     }
     case "ADMIN": {
-      const [users, courses] = await Promise.all([
+      const [users, courses, teams] = await Promise.all([
         db.user.findMany({
           where: { OR: [{ name: like(q) }, { surname: like(q) }, { email: like(q) }] },
           take: PER_GROUP,
@@ -93,10 +99,22 @@ export async function searchAction(rawQuery: unknown): Promise<SearchResult[]> {
           take: PER_GROUP,
           select: { id: true, title: true, scheduleDate: true },
         }),
+        db.team.findMany({
+          where: { OR: [{ name: like(q) }, { focusArea: like(q) }] },
+          take: PER_GROUP,
+          select: { id: true, name: true, representative: { select: { name: true, surname: true } } },
+        }),
       ]);
       return [
         ...users.map((u) => ({ id: u.id, group: "Kullanıcılar" as const, title: fullName(u), subtitle: u.email, href: `/admin/users?q=${encodeURIComponent(u.email)}` })),
         ...courses.map((c) => ({ id: c.id, group: "Eğitimler" as const, title: c.title, subtitle: formatDate(c.scheduleDate), href: "/admin/trainings" })),
+        ...teams.map((t) => ({
+          id: t.id,
+          group: "Ekipler" as const,
+          title: t.name,
+          subtitle: t.representative ? `Temsilci: ${fullName(t.representative)}` : null,
+          href: "/admin/teams",
+        })),
       ];
     }
     default:

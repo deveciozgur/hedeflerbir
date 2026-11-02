@@ -3,7 +3,7 @@ import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { BadgeIcon } from "../domain/badges";
 
-const ICONS: Record<BadgeIcon, LucideIcon> = {
+export const BADGE_ICONS: Record<BadgeIcon, LucideIcon> = {
   globe: Globe2,
   lightbulb: Lightbulb,
   chart: BarChart3,
@@ -27,7 +27,7 @@ export function BadgeGrid({ badges, compact = false }: { badges: BadgeGridItem[]
   return (
     <ul className={cn("grid gap-3", compact ? "grid-cols-3 sm:grid-cols-5 xl:grid-cols-9" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5")}>
       {badges.map((badge) => {
-        const Icon = ICONS[badge.icon];
+        const Icon = BADGE_ICONS[badge.icon];
         const earned = badge.awardedAt !== null;
         const pct = Math.round(badge.progress * 100);
         return (

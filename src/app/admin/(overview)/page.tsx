@@ -1,0 +1,169 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowRight, CalendarCheck2, Download, Hourglass, Plus, Sparkles, UserRoundCheck, UserRoundX, Users, UsersRound } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { BENTO_SPAN, BentoGrid } from "@/components/ui/bento";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatTile } from "@/components/ui/stat-tile";
+import { formatDateTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { getProgramOverview } from "@/modules/administration/application/program-overview.queries";
+import { ImportUsersDialog } from "@/modules/administration/ui/import-users-dialog";
+import { WeekCalendar } from "@/modules/administration/ui/week-calendar";
+import { AnnouncementDialog } from "@/modules/engagement/ui/announcement-dialog";
+import { getViewer } from "@/modules/identity/application/viewer.queries";
+import { listProgramOptions } from "@/modules/learning/application/trainings.queries";
+import { TrainingFormDialog } from "@/modules/learning/ui/training-form-dialog";
+import { listPeople } from "@/modules/people/application/people.queries";
+
+export const metadata: Metadata = { title: "Ana Sayfa" };
+
+const linkClass = "inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring";
+const rowClass =
+  "flex items-center gap-3 rounded-lg px-2 py-2 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
+export default async function AdminHomePage() {
+  const viewer = await getViewer("ADMIN");
+  const [o, courses, instructors] = await Promise.all([getProgramOverview(), listProgramOptions(), listPeople("INSTRUCTOR")]);
+  const actionCount = o.pendingCount + o.teamsWithoutRepresentative;
+
+  return (
+    <div className="flex flex-col gap-8">
+      <PageHeader title={`Merhaba, ${viewer.name}`} description="Programın operasyon merkezi: göstergeler, haftalık takvim ve senden aksiyon bekleyenler." />
+
+      <nav aria-label="Hızlı işlemler" className="flex flex-wrap gap-2">
+        <TrainingFormDialog
+          instructors={instructors}
+          trigger={
+            <Button disabled={instructors.length === 0}>
+              <Plus aria-hidden /> Yeni canlı eğitim
+            </Button>
+          }
+        />
+        <Button asChild variant="outline">
+          <Link href="/admin/teams">
+            <UsersRound aria-hidden /> Yeni ekip kur
+          </Link>
+        </Button>
+        <ImportUsersDialog />
+        <Button asChild variant="outline">
+          <Link href="/admin/reports#export-heading">
+            <Download aria-hidden /> Rapor indir
+          </Link>
+        </Button>
+        <AnnouncementDialog courses={courses} />
+      </nav>
+
+      <BentoGrid>
+        <section aria-label="Ana metrikler" className="contents">
+          <div className={BENTO_SPAN.kpi}>
+            <StatTile icon={Users} tone="brand" label="Aktif katılımcı" value={String(o.stats.participants)} />
+          </div>
+          <div className={BENTO_SPAN.kpi}>
+            <StatTile icon={UsersRound} tone="cyan" label="Kurulan ekip" value={String(o.stats.teams)} />
+          </div>
+          <div className={BENTO_SPAN.kpi}>
+            <StatTile
+              icon={CalendarCheck2}
+              tone="brand"
+              label="Gerçekleşen canlı eğitim"
+              value={`${o.trainings.held}/${o.trainings.total}`}
+              hint={`Programın %${o.trainings.percent} kadarı tamamlandı`}
+            />
+          </div>
+          <div className={BENTO_SPAN.kpi}>
+            <StatTile icon={Sparkles} tone="amber" label="Onaylanan mentorluk seansı" value={String(o.stats.approvedSessions)} hint={o.pendingCount > 0 ? `${o.pendingCount} seans onay bekliyor` : "Onay bekleyen yok"} />
+          </div>
+        </section>
+
+        <section aria-label="Haftalık takvim" className={BENTO_SPAN.mainWide}>
+          <WeekCalendar week={o.week} />
+        </section>
+
+        <section aria-label="Ekipler ve aksiyonlar" className={cn(BENTO_SPAN.sideWide, "grid gap-4 lg:grid-cols-2 xl:flex xl:flex-col")}>
+          <Card className="gap-3 py-5">
+            <CardHeader>
+              <CardTitle>
+                Aksiyon bekleyenler <span className="font-mono text-xs font-normal text-subtle tabular-nums">{actionCount}</span>
+              </CardTitle>
+              <Link href="/admin/mentors" className={linkClass}>
+                Seanslar <ArrowRight className="size-3" aria-hidden />
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {actionCount === 0 ? (
+                <p className="text-sm text-muted-foreground">Onay bekleyen seans ya da temsilcisiz ekip yok.</p>
+              ) : (
+                <ul className="-mx-2 flex flex-col">
+                  {o.pendingSessions.map((p) => (
+                    <li key={p.id}>
+                      <Link href="/admin/mentors" className={rowClass}>
+                        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-amber/20 text-foreground" aria-hidden>
+                          <Hourglass className="size-3.5" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">{p.team}</span>
+                          <span className="block truncate text-xs text-subtle">
+                            {p.mentor} · <span className="font-mono tabular-nums">{formatDateTime(p.start)}</span>
+                          </span>
+                        </span>
+                        <Badge variant="warning">Onayla</Badge>
+                      </Link>
+                    </li>
+                  ))}
+                  {o.pendingCount > o.pendingSessions.length ? (
+                    <li className="px-2 py-1 text-xs text-subtle">+{o.pendingCount - o.pendingSessions.length} seans daha onay bekliyor</li>
+                  ) : null}
+                  {o.teamsWithoutRepresentative > 0 ? (
+                    <li>
+                      <Link href="/admin/teams" className={rowClass}>
+                        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-magenta/10 text-magenta" aria-hidden>
+                          <UserRoundX className="size-3.5" />
+                        </span>
+                        <span className="min-w-0 flex-1 text-sm">
+                          <span className="font-mono tabular-nums">{o.teamsWithoutRepresentative}</span> ekibin temsilcisi yok
+                        </span>
+                        <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                      </Link>
+                    </li>
+                  ) : null}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="gap-3 py-5">
+            <CardHeader>
+              <CardTitle>Son kurulan ekipler</CardTitle>
+              <Link href="/admin/teams" className={linkClass}>
+                Ekipler <ArrowRight className="size-3" aria-hidden />
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {o.recentTeams.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Henüz ekip yok.</p>
+              ) : (
+                <ul className="flex flex-col gap-3">
+                  {o.recentTeams.map((t) => (
+                    <li key={t.id} className="flex items-center justify-between gap-3">
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium">{t.name}</span>
+                        <span className="flex items-center gap-1 truncate text-xs text-subtle">
+                          <UserRoundCheck className="size-3 shrink-0" aria-hidden />
+                          {t.representative ?? "Temsilci seçilmedi"}
+                        </span>
+                      </span>
+                      <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">{t.memberCount} üye</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      </BentoGrid>
+    </div>
+  );
+}

@@ -1,51 +1,109 @@
 import "server-only";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
-import { getInstructorCourseSummaries, type InstructorCourseSummary } from "./instructor-courses.queries";
+import { parseTopics } from "../domain/trainings";
 
-export interface InstructorOverview {
-  courses: InstructorCourseSummary[];
-  studentCount: number;
-  awaitingReview: Array<{ id: string; assignmentId: string; assignmentTitle: string; studentName: string; submittedAt: Date }>;
-  awaitingReviewTotal: number;
-  upcomingSessions: Array<{ id: string; courseId: string; courseTitle: string; title: string; scheduleDate: Date }>;
+export interface InstructorSubmission {
+  id: string;
+  assignmentId: string;
+  assignmentTitle: string;
+  trainingTitle: string | null;
+  student: { id: string; name: string; surname: string; avatarUrl: string | null };
+  fileName: string | null;
+  submittedAt: Date;
 }
 
+export interface InstructorNextSession {
+  id: string;
+  title: string;
+  scheduleDate: Date;
+  durationMinutes: number;
+  topics: string[];
+  /** Session description: the instructor's presentation notes. */
+  notes: string | null;
+  meetingUrl: string | null;
+  participantCount: number;
+}
+
+export interface InstructorOverview {
+  kpis: { delivered: number; attendances: number; awaitingReview: number; nextAt: Date | null };
+  recentSubmissions: InstructorSubmission[];
+  next: InstructorNextSession | null;
+  upcoming: Array<{ id: string; title: string; scheduleDate: Date }>;
+}
+
+/** Trainings the instructor gives: assigned directly, or (legacy) sessions of courses they own without an override. */
+const taughtBy = (instructorId: string): Prisma.CourseSessionWhereInput => ({
+  course: { status: { not: "DRAFT" } },
+  OR: [{ instructorId }, { instructorId: null, course: { instructorId } }],
+});
+
 export async function getInstructorOverview(instructorId: string): Promise<InstructorOverview> {
-  const owned = { course: { instructorId } };
-  const [courses, students, awaiting, awaitingTotal, sessions] = await Promise.all([
-    getInstructorCourseSummaries(instructorId),
-    db.enrollment.findMany({ where: owned, distinct: ["studentId"], select: { studentId: true } }),
+  const now = new Date();
+  const mine = taughtBy(instructorId);
+  // Grading follows course ownership (the grading desk's access rule) or the training the assignment belongs to.
+  const gradable: Prisma.AssignmentWhereInput = { OR: [{ course: { instructorId } }, { session: { instructorId } }] };
+
+  const [delivered, attendances, awaitingReview, submissions, upcoming] = await Promise.all([
+    db.courseSession.count({ where: { ...mine, scheduleDate: { lt: now } } }),
+    db.sessionAttendance.count({ where: { status: "PRESENT", session: mine } }),
+    db.submission.count({ where: { status: "SUBMITTED", assignment: gradable } }),
     db.submission.findMany({
-      where: { status: "SUBMITTED", assignment: owned },
-      orderBy: { submittedAt: "asc" },
-      take: 5,
+      where: { status: "SUBMITTED", assignment: gradable },
+      orderBy: { submittedAt: "desc" },
+      take: 6,
       select: {
         id: true,
+        fileName: true,
         submittedAt: true,
-        assignment: { select: { id: true, title: true } },
-        student: { select: { name: true, surname: true } },
+        assignment: { select: { id: true, title: true, session: { select: { title: true } } } },
+        student: { select: { id: true, name: true, surname: true, avatarUrl: true } },
       },
     }),
-    db.submission.count({ where: { status: "SUBMITTED", assignment: owned } }),
     db.courseSession.findMany({
-      where: { ...owned, scheduleDate: { gt: new Date() } },
+      where: { ...mine, scheduleDate: { gt: new Date(now.getTime() - 4 * 3_600_000) } },
       orderBy: { scheduleDate: "asc" },
-      take: 3,
-      select: { id: true, title: true, scheduleDate: true, course: { select: { id: true, title: true } } },
+      take: 4,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        topics: true,
+        scheduleDate: true,
+        durationMinutes: true,
+        meetingUrl: true,
+        course: { select: { _count: { select: { enrollments: true } } } },
+      },
     }),
   ]);
 
+  // Still running counts as "next" (the class is live now).
+  const live = upcoming.filter((s) => s.scheduleDate.getTime() + s.durationMinutes * 60_000 > now.getTime());
+  const first = live[0];
+
   return {
-    courses,
-    studentCount: students.length,
-    awaitingReviewTotal: awaitingTotal,
-    awaitingReview: awaiting.map((s) => ({
+    kpis: { delivered, attendances, awaitingReview, nextAt: first?.scheduleDate ?? null },
+    recentSubmissions: submissions.map((s) => ({
       id: s.id,
       assignmentId: s.assignment.id,
       assignmentTitle: s.assignment.title,
-      studentName: `${s.student.name} ${s.student.surname}`,
+      trainingTitle: s.assignment.session?.title ?? null,
+      student: s.student,
+      fileName: s.fileName,
       submittedAt: s.submittedAt,
     })),
-    upcomingSessions: sessions.map((s) => ({ id: s.id, courseId: s.course.id, courseTitle: s.course.title, title: s.title, scheduleDate: s.scheduleDate })),
+    next: first
+      ? {
+          id: first.id,
+          title: first.title,
+          scheduleDate: first.scheduleDate,
+          durationMinutes: first.durationMinutes,
+          topics: parseTopics(first.topics),
+          notes: first.description,
+          meetingUrl: first.meetingUrl,
+          participantCount: first.course._count.enrollments,
+        }
+      : null,
+    upcoming: live.slice(1).map((s) => ({ id: s.id, title: s.title, scheduleDate: s.scheduleDate })),
   };
 }

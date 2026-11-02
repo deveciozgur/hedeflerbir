@@ -1,9 +1,12 @@
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
-/** Elevated surface: translucent card over a blur, hairline border; soft drop shadow in light, top highlight in dark. */
+/**
+ * Elevated surface: opaque white with an xs shadow in light, zinc-900/40 over a blur without shadow in dark.
+ * The hairline border firms up on hover (zinc-300 / zinc-700).
+ */
 export const surfaceClass =
-  "rounded-xl border border-border bg-card backdrop-blur-md shadow-[0_1px_2px_var(--shadow)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.03)]";
+  "rounded-xl border border-border bg-card backdrop-blur-md shadow-[0_1px_2px_var(--shadow)] transition-[border-color] duration-200 hover:border-border-strong dark:shadow-none";
 
 export function Card({ className, ...props }: ComponentProps<"div">) {
   return <div data-slot="card" className={cn("flex flex-col gap-6 py-6 text-card-foreground", surfaceClass, className)} {...props} />;
