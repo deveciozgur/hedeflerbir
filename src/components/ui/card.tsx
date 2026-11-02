@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
  * The hairline border firms up on hover (zinc-300 / zinc-700).
  */
 export const surfaceClass =
-  "rounded-xl border border-border bg-card backdrop-blur-md shadow-[0_1px_2px_var(--shadow)] transition-[border-color] duration-200 hover:border-border-strong dark:shadow-none";
+  "rounded-xl border border-border bg-card backdrop-blur-md shadow-[0_1px_2px_var(--shadow)] transition-[border-color] duration-150 hover:border-border-strong dark:shadow-none";
 
 export function Card({ className, ...props }: ComponentProps<"div">) {
   return <div data-slot="card" className={cn("flex flex-col gap-6 py-6 text-card-foreground", surfaceClass, className)} {...props} />;

@@ -45,7 +45,7 @@ export default async function StudentDashboardPage() {
       </section>
 
       <section aria-label="Canlı eğitimler" className={BENTO_SPAN.main}>
-        <TrainingsWidget trainings={trainings} next={next} />
+        <TrainingsWidget trainings={trainings} next={next} sessions={sessions} />
       </section>
 
       <section aria-label="Rozetler ve mentorluk" className={`${BENTO_SPAN.side} flex flex-col gap-4`}>

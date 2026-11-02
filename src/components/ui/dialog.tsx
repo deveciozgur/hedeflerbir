@@ -32,6 +32,31 @@ export function DialogContent({ className, children, ...props }: ComponentProps<
   );
 }
 
+/** Full-height panel sliding in from the right edge (person details); same Radix dialog semantics. */
+export function SheetContent({ className, children, ...props }: ComponentProps<typeof DialogPrimitive.Content>) {
+  return (
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-overlay backdrop-blur-[2px] data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in" />
+      <DialogPrimitive.Content
+        className={cn(
+          "fixed inset-y-0 right-0 z-50 flex h-dvh w-full max-w-md flex-col gap-6 overflow-y-auto border-l border-border-strong/60 bg-popover p-6 text-popover-foreground shadow-2xl shadow-shadow outline-none",
+          "data-[state=closed]:animate-sheet-out data-[state=open]:animate-sheet-in",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        <DialogPrimitive.Close
+          className="absolute top-4 right-4 rounded-md p-1 text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-popover"
+          aria-label="Kapat"
+        >
+          <X className="size-4" />
+        </DialogPrimitive.Close>
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+  );
+}
+
 export function DialogHeader({ className, ...props }: ComponentProps<"div">) {
   return <div className={cn("flex flex-col gap-2 pr-8", className)} {...props} />;
 }

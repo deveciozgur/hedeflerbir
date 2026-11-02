@@ -55,7 +55,7 @@ export function StudentHero(props: StudentHeroProps) {
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <p className="text-xs font-medium text-brand-soft">Devam oranı {attendance.rate === null ? "henüz yok" : `%${attendance.rate}`}</p>
-            <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">Tekrar hoş geldin, {firstName}</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-balance sm:text-2xl">Tekrar hoş geldin, {firstName}</h1>
             <p className="max-w-[65ch] text-sm text-pretty text-muted-foreground">{summaryLine(props)}</p>
           </div>
           <dl className="flex flex-wrap gap-x-8 gap-y-3">
@@ -88,8 +88,16 @@ function railStatus(training: StudentTrainingCard) {
   return { label: "Tamamlanmadı", icon: CircleDashed, className: "text-muted-foreground" };
 }
 
-/** Next live training with a countdown and its actions, then the whole programme as a snap timeline. */
-export function TrainingsWidget({ trainings, next }: { trainings: StudentTrainingCard[]; next: StudentTrainingCard | null }) {
+type RailEntry =
+  | { kind: "training"; id: string; at: Date; training: StudentTrainingCard }
+  | { kind: "mentoring"; id: string; at: Date; session: StudentAppointment };
+
+/** Next live training with a countdown and its actions, then trainings and team mentoring sessions as one snap timeline. */
+export function TrainingsWidget({ trainings, next, sessions }: { trainings: StudentTrainingCard[]; next: StudentTrainingCard | null; sessions: StudentAppointment[] }) {
+  const rail: RailEntry[] = [
+    ...trainings.map((training) => ({ kind: "training" as const, id: training.id, at: training.scheduleDate, training })),
+    ...sessions.map((session) => ({ kind: "mentoring" as const, id: session.id, at: session.startTime, session })),
+  ].sort((a, b) => a.at.getTime() - b.at.getTime());
   const timing = next ? trainingTiming(next.scheduleDate, next.durationMinutes) : null;
   const soon = next ? timing === "live" || next.scheduleDate.getTime() - Date.now() < 30 * 60_000 : false;
 
@@ -162,11 +170,41 @@ export function TrainingsWidget({ trainings, next }: { trainings: StudentTrainin
           <EmptyState icon={CalendarClock} title="Yaklaşan canlı eğitim yok" description="Program yönetimi yeni eğitim eklediğinde burada geri sayım başlayacak." className="py-8" />
         )}
 
-        {trainings.length > 0 ? (
+        {rail.length > 0 ? (
           <div className="flex flex-col gap-2">
-            <h3 className="text-xs font-medium text-subtle">Program zaman çizelgesi</h3>
-            <SnapRail label="Canlı eğitim zaman çizelgesi">
-              {trainings.map((training) => {
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-xs font-medium text-subtle">Program zaman çizelgesi</h3>
+              <span className="flex items-center gap-3 text-[11px] text-subtle">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-brand" aria-hidden /> Canlı eğitim
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-amber" aria-hidden /> Mentorluk
+                </span>
+              </span>
+            </div>
+            <SnapRail label="Canlı eğitim ve mentorluk zaman çizelgesi">
+              {rail.map((entry) => {
+                if (entry.kind === "mentoring") {
+                  const { session } = entry;
+                  return (
+                    <li key={`m-${session.id}`} className="w-44 shrink-0 snap-start">
+                      <Link
+                        href="/mentors"
+                        className="flex h-full flex-col gap-2 rounded-lg border border-amber/40 bg-amber/5 p-3 outline-none transition-colors duration-150 hover:border-amber focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <time dateTime={session.startTime.toISOString()} className="font-mono text-[11px] text-subtle tabular-nums">
+                          {formatDate(session.startTime)} · {formatTime(session.startTime)}
+                        </time>
+                        <span className="line-clamp-2 text-sm font-medium">Mentorluk · {fullName(session.mentor)}</span>
+                        <span className="mt-auto inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Sparkles className="size-3.5" aria-hidden /> Onaylı seans
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                }
+                const { training } = entry;
                 const status = railStatus(training);
                 const Icon = status.icon;
                 return (

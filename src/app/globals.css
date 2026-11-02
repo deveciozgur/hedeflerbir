@@ -4,7 +4,7 @@
 
 /*
  * HedeflerBir design tokens (v2) - zinc neutrals, teal #008374 primary with magenta / cyan / amber
- * accents, two themes. Light: #F9FAFB page, opaque white cards with a hairline border and an xs shadow.
+ * accents, two themes. Light: #FAFAFA (zinc-50) page, opaque white cards with a hairline border and an xs shadow.
  * Dark: zinc-950 page, zinc-900/40 cards over a blur with a zinc-800/60 border and no shadow.
  * Light is the default (:root); `.dark` on <html> is set by next-themes before first paint.
  * Contrast notes (WCAG 2.1 AA) are measured against each theme's --background.
@@ -13,7 +13,7 @@
   color-scheme: light;
 
   /* Surfaces */
-  --background: #f9fafb;                               /* page */
+  --background: oklch(0.985 0 0);                      /* zinc-50 #fafafa: page, never raw white */
   --card: oklch(1 0 0);                                /* white */
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
@@ -36,7 +36,7 @@
   --subtle: oklch(0.552 0.016 285.938);                /* zinc-500 ~4.8:1 */
 
   /* Lines */
-  --border: oklch(0.92 0.004 286.32 / 0.75);           /* zinc-200/75 */
+  --border: oklch(0.92 0.004 286.32 / 0.8);            /* zinc-200/80 */
   --border-strong: oklch(0.871 0.006 286.286);         /* zinc-300: card hover */
   --border-hover: oklch(0.705 0.015 286.067);          /* zinc-400 */
   --input: oklch(0.871 0.006 286.286);
@@ -58,7 +58,7 @@
   --destructive: oklch(0.505 0.213 27.518);            /* red-700 ~6.5:1 */
   --destructive-solid: oklch(0.577 0.245 27.325);      /* red-600 fill, white text ~4.8:1 */
 
-  --sidebar: #f9fafb;
+  --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-accent: oklch(1 0 0);
   --sidebar-border: oklch(0.92 0.004 286.32);
@@ -175,6 +175,8 @@
   --animate-exit: exit 120ms var(--ease-out-expo) forwards;
   --animate-fade-in: fade-in 150ms var(--ease-out-expo);
   --animate-fade-out: fade-out 120ms var(--ease-out-expo) forwards;
+  --animate-sheet-in: sheet-in 260ms var(--ease-out-expo);
+  --animate-sheet-out: sheet-out 180ms var(--ease-out-expo) forwards;
 
   /* A soft highlight sweeping across the block (see Skeleton). */
   @keyframes shimmer {
@@ -189,6 +191,15 @@
   @keyframes exit {
     from { opacity: 1; scale: 1; }
     to { opacity: 0; scale: 0.98; }
+  }
+  /* Side sheet slides in from the right edge. */
+  @keyframes sheet-in {
+    from { translate: 100% 0; }
+    to { translate: 0 0; }
+  }
+  @keyframes sheet-out {
+    from { translate: 0 0; }
+    to { translate: 100% 0; }
   }
   @keyframes fade-in {
     from { opacity: 0; }

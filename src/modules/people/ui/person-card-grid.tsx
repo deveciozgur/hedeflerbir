@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { surfaceClass } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogDescription, DialogTitle, SheetContent } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,6 +85,18 @@ function TextBlock({ title, text, empty }: { title: string; text: string | null;
       <h3 className="text-xs font-medium text-subtle">{title}</h3>
       <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">{text || empty}</p>
     </section>
+  );
+}
+
+const ROLE_DOT = { STUDENT: "bg-brand", INSTRUCTOR: "bg-cyan", MENTOR: "bg-amber", ADMIN: "bg-magenta" } as const;
+
+/** Micro role tag: a brand-coloured dot and the role name. */
+function RoleTag({ role }: { role: PersonSummary["role"] }) {
+  return (
+    <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-border px-2 py-px text-[11px] text-muted-foreground">
+      <span className={cn("size-1.5 rounded-full", ROLE_DOT[role])} aria-hidden />
+      {ROLE_LABELS[role]}
+    </span>
   );
 }
 
@@ -193,48 +205,53 @@ interface PersonCardGridProps {
   emptyDescription?: string;
 }
 
-/** Card grid: photo or initials, name and a quiet school/role line; a card opens the details and a message form. */
+/** Compact card grid (photo or initials, name, role tag); a card slides the details and a message form in from the right. */
 export function PersonCardGrid({ people, canMessage = false, viewerId, details = {}, emptyTitle = "Henüz kimse yok", emptyDescription }: PersonCardGridProps) {
-  const [openId, setOpenId] = useState<string | null>(null);
-  const active = people.find((p) => p.id === openId) ?? null;
+  const [open, setOpen] = useState(false);
+  // The last opened person stays rendered while the sheet slides out.
+  const [shownId, setShownId] = useState<string | null>(null);
+  const active = people.find((p) => p.id === shownId) ?? null;
 
   if (people.length === 0) return <EmptyState icon={Users} title={emptyTitle} description={emptyDescription ?? ""} />;
 
   return (
     <>
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {people.map((person) => (
           <li key={person.id}>
             <button
               type="button"
-              onClick={() => setOpenId(person.id)}
+              onClick={() => {
+                setShownId(person.id);
+                setOpen(true);
+              }}
               aria-haspopup="dialog"
               className={cn(
                 surfaceClass,
-                "flex h-full w-full flex-col items-center gap-3 px-4 py-6 text-center outline-none transition-[border-color,background-color,scale] duration-200 hover:border-brand/50 hover:bg-brand/[0.03] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]",
+                "flex h-full w-full items-center gap-3 px-4 py-3.5 text-left outline-none transition-[border-color,background-color,scale] duration-150 hover:border-brand/50 hover:bg-brand/[0.03] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]",
               )}
             >
-              <PersonAvatar person={person} className="size-16" />
-              <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="line-clamp-2 text-sm font-semibold text-balance">
+              <PersonAvatar person={person} className="size-10" />
+              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="truncate text-sm font-medium">
                   {fullName(person)}
                   {person.id === viewerId ? <span className="font-normal text-muted-foreground"> (sen)</span> : null}
                 </span>
-                <span className="line-clamp-1 text-xs text-subtle">{cardSubtitle(person)}</span>
+                <RoleTag role={person.role} />
               </span>
             </button>
           </li>
         ))}
       </ul>
 
-      <Dialog open={active !== null} onOpenChange={(open) => !open && setOpenId(null)}>
+      <Dialog open={open} onOpenChange={setOpen}>
         {active ? (
-          <DialogContent className="max-h-[90dvh] max-w-lg gap-5 overflow-y-auto">
+          <SheetContent>
             <div className="flex items-center gap-4 pr-8">
-              <PersonAvatar person={active} className="size-16" />
-              <div className="min-w-0">
-                <DialogTitle className="truncate text-lg">{fullName(active)}</DialogTitle>
-                <p className="truncate text-sm text-muted-foreground">{active.title ?? ROLE_LABELS[active.role]}</p>
+              <PersonAvatar person={active} className="size-14" />
+              <div className="flex min-w-0 flex-col gap-1">
+                <DialogTitle className="truncate">{fullName(active)}</DialogTitle>
+                <p className="truncate text-sm text-muted-foreground">{cardSubtitle(active)}</p>
               </div>
             </div>
             <DialogDescription className="sr-only">{fullName(active)} profil ayrıntıları</DialogDescription>
@@ -243,8 +260,8 @@ export function PersonCardGrid({ people, canMessage = false, viewerId, details =
 
             {details[active.id] ?? null}
 
-            {canMessage && active.id !== viewerId ? <MessageForm key={active.id} person={active} onSent={() => setOpenId(null)} /> : null}
-          </DialogContent>
+            {canMessage && active.id !== viewerId ? <MessageForm key={active.id} person={active} onSent={() => setOpen(false)} /> : null}
+          </SheetContent>
         ) : null}
       </Dialog>
     </>
