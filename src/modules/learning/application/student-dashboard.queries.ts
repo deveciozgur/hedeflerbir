@@ -11,14 +11,13 @@ export interface AnnouncementSummary {
 
 export interface StudentDashboard {
   firstName: string;
-  hasTeam: boolean;
   announcements: AnnouncementSummary[];
 }
 
-/** Hero greeting and announcements; trainings, badges, assignments and sessions come from their own queries. */
+/** Hero greeting and announcements; trainings, badges, assignments, team and sessions come from their own queries. */
 export async function getStudentDashboard(studentId: string): Promise<StudentDashboard> {
   const [student, announcements] = await Promise.all([
-    db.user.findUniqueOrThrow({ where: { id: studentId }, select: { name: true, teamId: true } }),
+    db.user.findUniqueOrThrow({ where: { id: studentId }, select: { name: true } }),
     db.announcement.findMany({
       // Platform-wide announcements plus those of the student's own courses.
       where: { OR: [{ courseId: null }, { course: { enrollments: { some: { studentId } } } }] },
@@ -28,5 +27,5 @@ export async function getStudentDashboard(studentId: string): Promise<StudentDas
     }),
   ]);
 
-  return { firstName: student.name, hasTeam: student.teamId !== null, announcements };
+  return { firstName: student.name, announcements };
 }

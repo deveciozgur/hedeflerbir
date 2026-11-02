@@ -6,6 +6,7 @@ export const BENTO_SPAN = {
   full: "sm:col-span-2 lg:col-span-12",
   main: "sm:col-span-2 lg:col-span-8",
   side: "sm:col-span-2 lg:col-span-4",
+  half: "sm:col-span-2 lg:col-span-6",
   /** For dense widgets (a 7-day calendar): full width until xl, then 8 + 4. */
   mainWide: "sm:col-span-2 lg:col-span-12 xl:col-span-8",
   sideWide: "sm:col-span-2 lg:col-span-12 xl:col-span-4",

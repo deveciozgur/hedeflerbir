@@ -10,6 +10,8 @@ export interface InstructorSubmission {
   trainingTitle: string | null;
   student: { id: string; name: string; surname: string; avatarUrl: string | null };
   fileName: string | null;
+  note: string | null;
+  maxScore: number;
   submittedAt: Date;
 }
 
@@ -23,10 +25,13 @@ export interface InstructorNextSession {
   notes: string | null;
   meetingUrl: string | null;
   participantCount: number;
+  /** Roll calls are taken on the course page ("Oturumlar"). */
+  courseId: string;
 }
 
 export interface InstructorOverview {
-  kpis: { delivered: number; attendances: number; awaitingReview: number; nextAt: Date | null };
+  /** deliveredMinutes: total length of the live trainings already held. */
+  kpis: { delivered: number; deliveredMinutes: number; attendances: number; awaitingReview: number; nextAt: Date | null };
   recentSubmissions: InstructorSubmission[];
   next: InstructorNextSession | null;
   upcoming: Array<{ id: string; title: string; scheduleDate: Date }>;
@@ -45,7 +50,7 @@ export async function getInstructorOverview(instructorId: string): Promise<Instr
   const gradable: Prisma.AssignmentWhereInput = { OR: [{ course: { instructorId } }, { session: { instructorId } }] };
 
   const [delivered, attendances, awaitingReview, submissions, upcoming] = await Promise.all([
-    db.courseSession.count({ where: { ...mine, scheduleDate: { lt: now } } }),
+    db.courseSession.aggregate({ where: { ...mine, scheduleDate: { lt: now } }, _count: { _all: true }, _sum: { durationMinutes: true } }),
     db.sessionAttendance.count({ where: { status: "PRESENT", session: mine } }),
     db.submission.count({ where: { status: "SUBMITTED", assignment: gradable } }),
     db.submission.findMany({
@@ -55,8 +60,9 @@ export async function getInstructorOverview(instructorId: string): Promise<Instr
       select: {
         id: true,
         fileName: true,
+        note: true,
         submittedAt: true,
-        assignment: { select: { id: true, title: true, session: { select: { title: true } } } },
+        assignment: { select: { id: true, title: true, maxScore: true, session: { select: { title: true } } } },
         student: { select: { id: true, name: true, surname: true, avatarUrl: true } },
       },
     }),
@@ -72,7 +78,7 @@ export async function getInstructorOverview(instructorId: string): Promise<Instr
         scheduleDate: true,
         durationMinutes: true,
         meetingUrl: true,
-        course: { select: { _count: { select: { enrollments: true } } } },
+        course: { select: { id: true, _count: { select: { enrollments: true } } } },
       },
     }),
   ]);
@@ -82,7 +88,13 @@ export async function getInstructorOverview(instructorId: string): Promise<Instr
   const first = live[0];
 
   return {
-    kpis: { delivered, attendances, awaitingReview, nextAt: first?.scheduleDate ?? null },
+    kpis: {
+      delivered: delivered._count._all,
+      deliveredMinutes: delivered._sum.durationMinutes ?? 0,
+      attendances,
+      awaitingReview,
+      nextAt: first?.scheduleDate ?? null,
+    },
     recentSubmissions: submissions.map((s) => ({
       id: s.id,
       assignmentId: s.assignment.id,
@@ -90,6 +102,8 @@ export async function getInstructorOverview(instructorId: string): Promise<Instr
       trainingTitle: s.assignment.session?.title ?? null,
       student: s.student,
       fileName: s.fileName,
+      note: s.note,
+      maxScore: s.assignment.maxScore,
       submittedAt: s.submittedAt,
     })),
     next: first
@@ -102,6 +116,7 @@ export async function getInstructorOverview(instructorId: string): Promise<Instr
           notes: first.description,
           meetingUrl: first.meetingUrl,
           participantCount: first.course._count.enrollments,
+          courseId: first.course.id,
         }
       : null,
     upcoming: live.slice(1).map((s) => ({ id: s.id, title: s.title, scheduleDate: s.scheduleDate })),

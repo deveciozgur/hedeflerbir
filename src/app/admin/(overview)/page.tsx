@@ -17,6 +17,8 @@ import { getViewer } from "@/modules/identity/application/viewer.queries";
 import { listProgramOptions } from "@/modules/learning/application/trainings.queries";
 import { TrainingFormDialog } from "@/modules/learning/ui/training-form-dialog";
 import { listPeople } from "@/modules/people/application/people.queries";
+import { listTeamCandidates, listTeams } from "@/modules/people/application/teams.queries";
+import { NewTeamButton } from "@/modules/people/ui/team-manager";
 
 export const metadata: Metadata = { title: "Ana Sayfa" };
 
@@ -26,7 +28,13 @@ const rowClass =
 
 export default async function AdminHomePage() {
   const viewer = await getViewer("ADMIN");
-  const [o, courses, instructors] = await Promise.all([getProgramOverview(), listProgramOptions(), listPeople("INSTRUCTOR")]);
+  const [o, courses, instructors, teams, candidates] = await Promise.all([
+    getProgramOverview(),
+    listProgramOptions(),
+    listPeople("INSTRUCTOR"),
+    listTeams(),
+    listTeamCandidates(),
+  ]);
   const actionCount = o.pendingCount + o.teamsWithoutRepresentative;
 
   return (
@@ -42,11 +50,7 @@ export default async function AdminHomePage() {
             </Button>
           }
         />
-        <Button asChild variant="outline">
-          <Link href="/admin/teams">
-            <UsersRound aria-hidden /> Yeni ekip kur
-          </Link>
-        </Button>
+        <NewTeamButton teams={teams} candidates={candidates} />
         <ImportUsersDialog />
         <Button asChild variant="outline">
           <Link href="/admin/reports#export-heading">
@@ -94,7 +98,7 @@ export default async function AdminHomePage() {
             </CardHeader>
             <CardContent>
               {actionCount === 0 ? (
-                <p className="text-sm text-muted-foreground">Onay bekleyen seans ya da temsilcisiz ekip yok.</p>
+                <p className="pb-1 text-sm text-muted-foreground">Onay bekleyen seans ya da temsilcisiz ekip yok.</p>
               ) : (
                 <ul className="-mx-2 flex flex-col">
                   {o.pendingSessions.map((p) => (
@@ -131,6 +135,13 @@ export default async function AdminHomePage() {
                   ) : null}
                 </ul>
               )}
+              <Link href="/admin/users" className={cn(rowClass, "-mx-2 mt-1 border-t border-border pt-3")}>
+                <span className="grid size-7 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground" aria-hidden>
+                  <UserRoundX className="size-3.5" />
+                </span>
+                <span className="min-w-0 flex-1 text-sm">Kullanıcı askıya al / etkinleştir</span>
+                <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+              </Link>
             </CardContent>
           </Card>
 

@@ -129,7 +129,8 @@ export async function gradeSubmissionAction(input: unknown): Promise<ActionResul
   const { submissionId, decision, grade, feedback } = parsed.data;
 
   const submission = await db.submission.findFirst({
-    where: { id: submissionId, assignment: { course: { instructorId: instructor.id } } },
+    // Course owner, or the instructor of the training the assignment belongs to.
+    where: { id: submissionId, assignment: { OR: [{ course: { instructorId: instructor.id } }, { session: { instructorId: instructor.id } }] } },
     select: { id: true, status: true, studentId: true, assignment: { select: { id: true, title: true, maxScore: true } } },
   });
   if (!submission) return fail("Teslim bulunamadı.");
@@ -162,5 +163,6 @@ export async function gradeSubmissionAction(input: unknown): Promise<ActionResul
   if (decision === "GRADED") after(() => awardBadgesSafely([submission.studentId]));
   revalidatePath(`/instructor/assignments/${submission.assignment.id}`);
   revalidatePath("/instructor/assignments");
+  revalidatePath("/instructor");
   return ok({ status: decision });
 }

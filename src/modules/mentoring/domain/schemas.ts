@@ -44,3 +44,10 @@ export const weeklyAvailabilitySchema = z.object({
     .max(7 * (TEMPLATE_LAST_HOUR - TEMPLATE_FIRST_HOUR)),
   slotMinutes: z.union(SLOT_LENGTHS.map((length) => z.literal(length)), { error: "Geçerli bir seans süresi seçin." }),
 });
+
+export const meetingLinkSchema = z.object({
+  appointmentId: z.string().min(1),
+  meetingLink: z
+    .union([z.literal(""), z.url({ protocol: /^https?$/, error: "Geçerli bir bağlantı girin (https://...)." })])
+    .transform((v) => v || null),
+});

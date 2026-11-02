@@ -25,7 +25,8 @@ export interface InstructorAssignmentRow {
 }
 
 export async function getInstructorAssignments(instructorId: string): Promise<InstructorAssignmentRow[]> {
-  const ownedBy = { course: { instructorId } };
+  // Course owner, or the instructor of the training the assignment belongs to.
+  const ownedBy = { OR: [{ course: { instructorId } }, { session: { instructorId } }] };
   const [assignments, counts] = await Promise.all([
     db.assignment.findMany({
       where: ownedBy,
@@ -89,7 +90,7 @@ const REVIEW_PRIORITY: Record<SubmissionStatus | "NONE", number> = { SUBMITTED: 
 
 export async function getGradingWorkspace(instructorId: string, assignmentId: string): Promise<GradingWorkspace> {
   const row = await db.assignment.findFirst({
-    where: { id: assignmentId, course: { instructorId } },
+    where: { id: assignmentId, OR: [{ course: { instructorId } }, { session: { instructorId } }] },
     select: {
       id: true,
       title: true,

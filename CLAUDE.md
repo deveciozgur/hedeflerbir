@@ -82,8 +82,8 @@ Feature briefs often use generic names. They map to existing pieces:
 Routes by role:
 
 - **Student**: `/dashboard` (training progress + badge showcase), `/trainings` (live-training calendar, Tamamlandı/Tamamlanmadı) and `/trainings/[sessionId]` (topics, link, assignment upload), `/assignments` (to-do list linking to the training), `/team` (Ekibim, read-only: problem, representative, members), `/participants` (all participants as cards), `/mentors` (mentor cards + the team's approved sessions; no calendar, `/mentors/[id]` redirects), `/profile` (attendance, 9 badges).
-- **Instructor**: `/instructor/students` lists every participant as person cards; roll calls via `attendance-dialog.tsx`.
-- **Mentor**: appointment cards show the team brief; only approved sessions (PENDING never reaches mentor or team views); no join button, no booking.
+- **Instructor**: `/instructor` (hours KPI, grading drawer `grading-drawer.tsx` that grades in a side sheet, class prep card), `/instructor/students` lists every participant as person cards; roll calls via `attendance-dialog.tsx`. Grading access = course owner or the training's own instructor (action, desk query and file route).
+- **Mentor**: appointment cards show the team brief (representative, members, problem); only approved sessions (PENDING never reaches mentor or team views); no booking. The mentor views and sets each session's meeting link (`MeetingLinkField` → `setMeetingLinkAction`, team notified).
 - **Admin**: `/admin` (training progress + weekly calendar), `/admin/users` (single create + CSV import, suspension), `/admin/participants` (cards with the full profile record + badge toggles), `/admin/teams` (members multi-select, representative, problem), `/admin/trainings` (training cards + Eğitmenler cards; no programme picker), `/admin/mentors` ("Yeni seans", pending sessions with Onayla, approved/past sessions, mentor availability), `/admin/reports` (demographics, attendance, mentoring, expertise, export; `/admin/exports` redirects here), `/admin/audit`.
 - Also: `/mentor/availability` (weekly planner), Cmd/Ctrl+K palette in every shell (`components/layout/command-palette.tsx`).
 

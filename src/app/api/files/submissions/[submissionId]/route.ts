@@ -15,7 +15,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ subm
       fileUrl: true,
       fileName: true,
       studentId: true,
-      assignment: { select: { course: { select: { instructorId: true } } } },
+      assignment: { select: { course: { select: { instructorId: true } }, session: { select: { instructorId: true } } } },
     },
   });
 
@@ -23,7 +23,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ subm
     submission &&
     (user.role === "ADMIN" ||
       submission.studentId === user.id ||
-      submission.assignment.course.instructorId === user.id);
+      submission.assignment.course.instructorId === user.id ||
+      // The instructor giving the training the assignment belongs to.
+      submission.assignment.session?.instructorId === user.id);
   if (!allowed) return new Response("Not found", { status: 404 });
 
   // ?inline=1 lets the grading desk preview PDFs/images in place; other types always download.

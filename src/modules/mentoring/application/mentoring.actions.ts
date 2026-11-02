@@ -10,7 +10,7 @@ import { awardBadgesSafely } from "@/modules/engagement/application/badges.servi
 import { formatDateTime } from "@/lib/format";
 import { canApprove, canBook, canCancel, canComplete } from "../domain/appointment-policy";
 import { generateSlots, partitionConflicts, validateWindow } from "../domain/availability";
-import { appointmentIdSchema, availabilityInputSchema, sessionScheduleSchema, teamBookingSchema, weeklyAvailabilitySchema } from "../domain/schemas";
+import { appointmentIdSchema, availabilityInputSchema, meetingLinkSchema, sessionScheduleSchema, teamBookingSchema, weeklyAvailabilitySchema } from "../domain/schemas";
 import { cellsToRanges } from "../domain/weekly-template";
 import { syncTemplateSlots } from "./weekly-availability.service";
 import { sendAppointmentBookedEmails, sendAppointmentCancelledEmail } from "./appointment-emails";
@@ -373,6 +373,37 @@ export async function completeAppointmentAction(appointmentId: unknown): Promise
   await db.appointment.update({ where: { id: appointment.id }, data: { status: "COMPLETED" } });
   const attendees = new Set([appointment.studentId, ...(appointment.team?.members.map((m) => m.id) ?? [])]);
   after(() => awardBadgesSafely([...attendees]));
+  revalidateMentoring();
+  return ok(undefined);
+}
+
+/** Mentor (own approved sessions) or admin sets the external meeting link; the team is told once it changes. */
+export async function setMeetingLinkAction(input: unknown): Promise<ActionResult> {
+  const user = await requireRole("MENTOR", "ADMIN");
+  const parsed = meetingLinkSchema.safeParse(input);
+  if (!parsed.success) return fail("Lütfen bağlantıyı kontrol edin.", z.flattenError(parsed.error).fieldErrors);
+
+  const appointment = await db.appointment.findFirst({
+    where: { id: parsed.data.appointmentId, status: { in: ["PENDING", "CONFIRMED"] }, ...(user.role === "MENTOR" ? { mentorId: user.id, status: "CONFIRMED" } : {}) },
+    select: { id: true, status: true, meetingLink: true, studentId: true, slot: { select: { startTime: true } }, team: { select: { members: { where: { isActive: true }, select: { id: true } } } } },
+  });
+  if (!appointment) return fail("Seans bulunamadı.");
+  if (appointment.meetingLink === parsed.data.meetingLink) return ok(undefined);
+
+  await db.appointment.update({ where: { id: appointment.id }, data: { meetingLink: parsed.data.meetingLink } });
+  // Teams only see approved sessions, so a PENDING one stays silent until "Onayla".
+  if (appointment.status === "CONFIRMED" && parsed.data.meetingLink) {
+    const memberIds = appointment.team?.members.map((m) => m.id) ?? [appointment.studentId];
+    await db.notification.createMany({
+      data: memberIds.map((userId) => ({
+        userId,
+        type: "SYSTEM" as const,
+        title: "Mentorluk görüşme bağlantısı eklendi",
+        body: formatDateTime(appointment.slot.startTime),
+        href: "/mentors",
+      })),
+    });
+  }
   revalidateMentoring();
   return ok(undefined);
 }

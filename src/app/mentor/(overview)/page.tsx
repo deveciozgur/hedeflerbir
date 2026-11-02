@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CalendarClock, CalendarPlus } from "lucide-react";
+import { ArrowRight, CalendarClock, CalendarPlus, ExternalLink } from "lucide-react";
 import { BENTO_SPAN, BentoGrid } from "@/components/ui/bento";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,7 @@ export const metadata: Metadata = { title: "Genel Bakış" };
 export default async function MentorOverviewPage() {
   const viewer = await getViewer("MENTOR");
   const o = await getMentorOverview(viewer.id);
+  const nextSession = o.next[0] ?? null;
   const all = o.completedTotal + o.upcomingCount;
   const completedPct = all === 0 ? 0 : (o.completedTotal / all) * 100;
   const legend = [
@@ -75,8 +76,8 @@ export default async function MentorOverviewPage() {
           <Card className="gap-5 lg:sticky lg:top-20">
             <CardHeader>
               <div>
-                <CardTitle>Seans raporu</CardTitle>
-                <CardDescription>Tamamlanan ve bekleyen seanslar</CardDescription>
+                <CardTitle>Seans istatistikleri</CardTitle>
+                <CardDescription>Gerçekleşen ve planlanan seanslar</CardDescription>
               </div>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-6">
@@ -92,6 +93,24 @@ export default async function MentorOverviewPage() {
                   </div>
                 ))}
               </dl>
+              <div className="flex w-full flex-col gap-2 border-t border-border pt-4">
+                <h3 className="text-xs font-medium text-subtle">Sıradaki görüşme bağlantısı</h3>
+                {nextSession ? (
+                  nextSession.meetingLink ? (
+                    <Button asChild size="sm" variant="outline" className="w-fit">
+                      <a href={nextSession.meetingLink} target="_blank" rel="noreferrer noopener">
+                        <ExternalLink aria-hidden /> {nextSession.team.name ?? "Seans"} görüşmesine git
+                      </a>
+                    </Button>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {nextSession.team.name ?? "Sıradaki seans"} için henüz bağlantı yok; seans kartından ekleyebilirsin.
+                    </p>
+                  )
+                ) : (
+                  <p className="text-sm text-muted-foreground">Yaklaşan onaylı seans yok.</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </section>

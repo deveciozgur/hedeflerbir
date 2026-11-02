@@ -60,8 +60,9 @@ export interface MentorAppointmentRow {
   startTime: Date;
   endTime: Date;
   notes: string | null;
-  /** Admin-only fields; mentor views leave them out. */
+  /** Admin-only; mentor views leave it out. */
   adminNotes: string | null;
+  /** External meeting link; the mentor (own sessions) and admins can view and set it. */
   meetingLink: string | null;
   mentorName: string;
   team: TeamBrief;
@@ -116,7 +117,7 @@ export async function listAppointments(phase: AppointmentPhase, mentorId?: strin
   return rows.map(({ slot, student, team, mentor, adminNotes, meetingLink, ...appointment }) => ({
     ...appointment,
     adminNotes: mentorId ? null : adminNotes,
-    meetingLink: mentorId ? null : meetingLink,
+    meetingLink,
     mentorName: `${mentor.name} ${mentor.surname}`,
     startTime: slot.startTime,
     endTime: slot.endTime,

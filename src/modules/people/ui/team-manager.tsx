@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useMemo, useState, useTransition, type ReactNode } from "react";
-import { Loader2, Pencil, Plus, Search, Target, Trash2, UserRoundCheck, Users } from "lucide-react";
+import { Loader2, Pencil, Plus, Search, Target, Trash2, UserRoundCheck, Users, UsersRound } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -156,6 +156,21 @@ function TeamDialog({ team, candidates, teamNames, trigger }: { team?: TeamRow; 
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** "Yeni ekip kur" anywhere in the admin area (e.g. the home dock) opens the same create dialog. */
+export function NewTeamButton({ teams, candidates, variant = "outline" }: { teams: Array<{ id: string; name: string }>; candidates: TeamCandidate[]; variant?: "outline" | "default" }) {
+  return (
+    <TeamDialog
+      candidates={candidates}
+      teamNames={new Map(teams.map((t) => [t.id, t.name]))}
+      trigger={
+        <Button variant={variant}>
+          <UsersRound aria-hidden /> Yeni ekip kur
+        </Button>
+      }
+    />
   );
 }
 

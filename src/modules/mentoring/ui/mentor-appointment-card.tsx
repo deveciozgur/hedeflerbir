@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, CheckCircle2, Link2, Mail, NotebookPen, Target, UserRoundCheck, Users } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Mail, NotebookPen, Target, UserRoundCheck, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AddToCalendar } from "@/components/ui/add-to-calendar";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { approveAppointmentAction, cancelAppointmentAction, completeAppointmentA
 import type { MentorAppointmentRow } from "../application/mentor-portal.queries";
 import { APPOINTMENT_STATUS_LABELS, canApprove, canCancel, canComplete } from "../domain/appointment-policy";
 import { appointmentCalendarEvent, appointmentIcsHref } from "../domain/calendar-event";
+import { MeetingLinkField } from "./meeting-link-field";
 import { ConfirmActionButton } from "@/components/ui/confirm-action-button";
 
 const STATUS_VARIANT = { PENDING: "warning", CONFIRMED: "brand", COMPLETED: "success", CANCELLED: "outline" } as const;
@@ -67,11 +68,8 @@ export function MentorAppointmentCard({ appointment: a, showActions = true }: { 
                 <p className="text-sm whitespace-pre-wrap">{a.adminNotes}</p>
               </div>
             ) : null}
-            {a.meetingLink ? (
-              <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                <Link2 className="size-3.5 shrink-0" aria-hidden />
-                <span className="truncate">{a.meetingLink}</span>
-              </p>
+            {a.status === "PENDING" || a.status === "CONFIRMED" ? (
+              <MeetingLinkField appointmentId={a.id} link={a.meetingLink} editable={showActions && a.endTime > new Date()} />
             ) : null}
           </div>
 
@@ -100,7 +98,7 @@ export function MentorAppointmentCard({ appointment: a, showActions = true }: { 
         <div className="flex flex-wrap gap-2 border-t pt-4">
           {a.status === "CONFIRMED" && a.startTime > new Date() ? (
             <AddToCalendar
-              event={appointmentCalendarEvent({ id: a.id, startTime: a.startTime, endTime: a.endTime, meetingLink: null, withName: title })}
+              event={appointmentCalendarEvent({ id: a.id, startTime: a.startTime, endTime: a.endTime, meetingLink: a.meetingLink, withName: title })}
               icsHref={appointmentIcsHref(a.id)}
             />
           ) : null}
