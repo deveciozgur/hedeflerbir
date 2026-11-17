@@ -16,3 +16,6 @@ npm-debug.log*
 
 # local file storage (dev)
 .uploads
+
+# design-taste-frontend skill scratch output
+.taste-skill/
