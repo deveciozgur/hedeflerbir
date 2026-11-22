@@ -19,3 +19,6 @@ npm-debug.log*
 
 # design-taste-frontend skill scratch output
 .taste-skill/
+
+# graphify output (knowledge graph, local only)
+graphify-out/
